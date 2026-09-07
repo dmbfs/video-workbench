@@ -50,29 +50,29 @@ scripts/e2e-m2b.mjs           # 首页→工作台全链路 + 截图
 ## Tasks
 
 ### Task 1: 路由化 + registry 组件落地
-- [ ] 装 react-router-dom + motion；main.tsx 挂 BrowserRouter
-- [ ] App.tsx 改路由壳：`/` Landing（无侧栏）；`/app`、`/settings` 共用应用壳（现侧栏+Tabs 改为路由驱动的 Aceternity Tabs）
-- [ ] 按「组件映射」逐个 registry 安装；失败项从 API JSON 拉 files 落盘并改写 next/image
-- [ ] 验证：build 过 + `/` `/app` `/settings` 三路由可达；Commit `feat(web): router shell + aceternity/magicui components`
+- [x] 装 react-router-dom + motion；main.tsx 挂 BrowserRouter
+- [x] App.tsx 改路由壳：`/` Landing（无侧栏）；`/app`、`/settings` 共用应用壳（现侧栏+Tabs 改为路由驱动的 Aceternity Tabs）
+- [x] 按「组件映射」逐个 registry 安装；失败项从 API JSON 拉 files 落盘并改写 next/image
+- [x] 验证：build 过 + `/` `/app` `/settings` 三路由可达；Commit `feat(web): router shell + aceternity/magicui components`
 
 ### Task 2: 首页落地页
-- [ ] Nav：玻璃拟态（backdrop-blur+噪点底），logo + 「进工作台」Shimmer Button
-- [ ] Hero 左文右"输入条演示"非对称布局：Spotlight+Dot Pattern 背景；标题「把一句话，变成一条能发的片」；Word Rotate 副标题；Vanish Input（点它跳 /app 并带入文本）
-- [ ] FeatureBento：4 格不对称 bento——「先聊再烧钱」「一段翻车不重来」「key 只存你电脑」「5–60s 自己定」，Number Ticker 点缀
-- [ ] FlowSteps：三步卡（对话→分镜→成片）Border Beam 循环；Footer 一行版权+文案「key 自己填，数据不出去」
-- [ ] 文案全部过 §6 军规；Commit `feat(web): landing page`
+- [x] Nav：玻璃拟态（backdrop-blur+噪点底），logo + 「进工作台」Shimmer Button
+- [x] Hero 左文右"输入条演示"非对称布局：Spotlight+Dot Pattern 背景；标题「把一句话，变成一条能发的片」；Word Rotate 副标题；Vanish Input（点它跳 /app 并带入文本）
+- [x] FeatureBento：4 格不对称 bento——「先聊再烧钱」「一段翻车不重来」「key 只存你电脑」「5–60s 自己定」，Number Ticker 点缀
+- [x] FlowSteps：三步卡（对话→分镜→成片）Border Beam 循环；Footer 一行版权+文案「key 自己填，数据不出去」
+- [x] 文案全部过 §6 军规；Commit `feat(web): landing page`
 
 ### Task 3: 工作台/设置动效升级
-- [ ] 生成中卡片换 Glowing Effect；分镜卡 hover Card Spotlight；「生成全部」「保存全部」换 Shimmer Button（loading 态保留）
-- [ ] 提案卡 Blur Fade 进出场；路由切换 AnimatePresence（fade+8px slide, expo-out）
-- [ ] 首进 /app 编排 stagger：侧栏→提示词条→分镜卡 40ms 递增（沿用 rise-in）
-- [ ] 验证：build + 手测；Commit `feat(web): app motion polish`
+- [x] 生成中卡片换 Glowing Effect；分镜卡 hover Card Spotlight；「生成全部」「保存全部」换 Shimmer Button（loading 态保留）
+- [x] 提案卡 Blur Fade 进出场；路由切换 AnimatePresence（fade+8px slide, expo-out）
+- [x] 首进 /app 编排 stagger：侧栏→提示词条→分镜卡 40ms 递增（沿用 rise-in）
+- [x] 验证：build + 手测；Commit `feat(web): app motion polish`
 
 ### Task 4: E2E + 截图验收
-- [ ] 新增 `e2e-m2b.mjs`：`/` 截图 → Vanish Input 输入跳转 `/app` → 走 M2 全链路（对话→提案→采用→生成→导出）→ 各状态截图 `m2b-*.png`
-- [ ] 更新 `e2e.mjs`/`e2e-m2.mjs` 的导航选择器（进入 /app 路由）
-- [ ] 红线逐条核对截图（视觉桥若仍故障则列清单交用户人工复核）
-- [ ] Commit `test(e2e): m2b landing + motion acceptance` + PRD 标记完成
+- [x] 新增 `e2e-m2b.mjs`：`/` 截图 → Vanish Input 输入跳转 `/app` → 走 M2 全链路（对话→提案→采用→生成→导出）→ 各状态截图 `m2b-*.png`
+- [x] 更新 `e2e.mjs`/`e2e-m2.mjs` 的导航选择器（进入 /app 路由）
+- [x] 红线逐条核对截图（视觉桥若仍故障则列清单交用户人工复核）
+- [x] Commit `test(e2e): m2b landing + motion acceptance` + PRD 标记完成
 
 ## Self-Review 记录
 1. 用户三条反馈全覆盖：首页(T2)、动效(T2/T3)、Aceternity+Magic UI(组件映射)。

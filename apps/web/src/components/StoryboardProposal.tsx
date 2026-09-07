@@ -1,5 +1,6 @@
 import type { StoryboardProposal } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
+import { BlurFade } from "@/components/ui/blur-fade";
 
 export function StoryboardProposalCard({ sb, existingCount, applying, onApply, onClose }: {
   sb: StoryboardProposal;
@@ -10,7 +11,7 @@ export function StoryboardProposalCard({ sb, existingCount, applying, onApply, o
 }) {
   const total = sb.segments.reduce((a, s) => a + s.duration, 0);
   return (
-    <div className="rise-in fixed bottom-6 right-6 w-[440px] max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-popover shadow-2xl p-4 z-50 space-y-3">
+    <BlurFade inView className="fixed bottom-6 right-6 w-[440px] max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-popover shadow-2xl p-4 z-50 space-y-3">
       <div className="flex items-baseline justify-between">
         <h3 className="font-display font-semibold">{sb.title}</h3>
         <span className="text-xs font-mono text-muted-foreground">
@@ -35,6 +36,6 @@ export function StoryboardProposalCard({ sb, existingCount, applying, onApply, o
           {existingCount > 0 ? `替换现有 ${existingCount} 段并采用` : "采用到时间线"}
         </Button>
       </div>
-    </div>
+    </BlurFade>
   );
 }

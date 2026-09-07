@@ -21,7 +21,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 try {
-  await page.goto(BASE);
+  await page.goto(BASE + "/app");
   await page.waitForSelector("text=vidstitch");
 
   // 1. 新建项目（默认 16:9）

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { ChatPanel } from "@/components/ChatPanel";
 import { StoryboardProposalCard } from "@/components/StoryboardProposal";
 
@@ -112,8 +114,10 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
       <div className="flex gap-3 overflow-x-auto pb-2">
         {segments.map((s, i) => (
           <div key={s.id}
-            className={`rise-in relative w-64 shrink-0 rounded-xl border bg-card p-3 space-y-2 ${s.status === "generating" ? "breathe" : "border-border"}`}
+            className={`${s.status === "generating" ? "breathe relative rounded-xl" : "relative"}`}
             style={{ animationDelay: `${120 + i * 40}ms` }}>
+            <GlowingEffect spread={32} glow proximity={56} inactiveZone={0.6} borderWidth={1.5} disabled={s.status === "generating"} />
+            <div className="rise-in rounded-xl border border-border bg-card p-3 space-y-2 h-full">
             <div className="flex items-center justify-between">
               <span className="font-display text-lg text-primary">{String(s.idx).padStart(2, "0")}</span>
               <span className={`text-xs rounded-full px-2 py-0.5 ${
@@ -138,6 +142,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
                 <Trash2 className="size-3.5 text-destructive" />
               </Button>
             </div>
+            </div>
           </div>
         ))}
         {segments.length === 0 && (
@@ -149,10 +154,11 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
 
       {/* 底部操作条 */}
       <div className="rise-in flex items-center gap-3" style={{ animationDelay: "160ms" }}>
-        <Button onClick={generateAll} disabled={generating || segments.length === 0}
-          className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <ShimmerButton onClick={generateAll} disabled={generating || segments.length === 0}
+          background="#F97316" shimmerColor="#FDBA74"
+          className="h-10 px-5 text-sm font-medium text-primary-foreground">
           {generating && <Loader2 className="size-4 animate-spin" />} 生成全部
-        </Button>
+        </ShimmerButton>
         <Button variant="outline" disabled={!allDone || exporting} onClick={() => setConfirmOpen(true)}>
           {exporting && <Loader2 className="size-4 animate-spin" />} 导出成片
         </Button>

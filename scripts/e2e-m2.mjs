@@ -34,7 +34,7 @@ try {
     if (p.title === "M2对话验收") await fetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
   }
 
-  await page.goto(BASE);
+  await page.goto(BASE + "/app");
   await page.waitForSelector("text=vidstitch");
 
   // 1. 新建项目并进入

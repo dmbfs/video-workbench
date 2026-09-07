@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 
 type Draft = {
   id: string; kind: ProviderKind; label: string;
@@ -96,7 +97,7 @@ export function SettingsPage() {
       <div className="flex items-center gap-3">
         <Button variant="outline" onClick={add}><Plus className="size-4" />加一个模型</Button>
         <div className="flex-1" />
-        <Button onClick={save} className="bg-primary text-primary-foreground hover:bg-primary/90">保存全部</Button>
+        <ShimmerButton onClick={save} background="#F97316" shimmerColor="#FDBA74" className="h-9 px-4 text-sm font-medium text-primary-foreground">保存全部</ShimmerButton>
         {msg && <span className="text-sm text-[#4ADE80]">{msg}</span>}
       </div>
 

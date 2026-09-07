@@ -45,6 +45,14 @@
 
 按工作类别 Firecrawl 调研 + GitHub API 核星，用户拍板全装五件：`anthropics/frontend-design`、`microsoft/frontend-ui-dark-ts`、`google-labs-code/stitch-skills` 之 shadcn-ui、`anthropics/webapp-testing`、`MiniMax-AI/fullstack-dev`（五仓星标：174.9k / 3k / 8.3k / 174.9k / 13.5k），连同配套 references/examples 共 13 文件存 `skills/`。否定结论两条：数据层无适配本地方案的高星技能（Neon/ClickHouse 系均为云厂商专属），由 fullstack-dev 数据库部分覆盖；分镜脚本写作不装通用 prompt 技能（prompt-architect 仅 294★），采领域专用素材方案（H3 示例库 + Seedance JSON 指南 + PRD 六要素模板），参考 Piebald-AI/claude-code-system-prompts（12.6k★）。映射表见项目 `AGENTS.md`。
 
+## 5c. 第三轮：权威产品学习 + 组件库评估 + Context7 通道（已定）
+
+- **Google Flow**（labs.google/flow 实抓）：Plan/Create/Refine 三段式产品叙事；「自然语言批量改全部分镜」吸收为 PRD P1 项；Nano Banana 参考图一致性思路与现有 Reference 能力对齐。证据：`.firecrawl/ref-flow.json`、`shot-flow.png`
+- **Veo 官方提示词指南**（cloud.google.com，35.7KB）：提示词解剖学=主体/动作/场景/运镜角度/运镜运动/风格美学/氛围/音频/负向约束 → 并入 PRD §7.3 七要素模板（新增音频、负向约束）。证据：`.firecrawl/veo-prompt-guide.md`
+- **Anthropic 前端美学指南**（platform.claude.com cookbook）：点名 Space Grotesk 已成 AI 收敛默认 → DESIGN.md 展示字体改 **Bricolage Grotesque**；其余原则（主色主导+锐利点缀、一次编排的加载动效、背景做氛围）与现有规范一致，已并入。证据：`.firecrawl/anthropic-aesthetics.md`
+- **组件库评估**：Magic UI（16.4k★）采用（与 shadcn/Aceternity 同 registry 装法）；Mantine、Radix Themes 样式体系冲突不引入（Radix Primitives 已在 shadcn 底层）；ui.glass 抓取被阻，玻璃拟态用 backdrop-filter 自实现
+- **Context7**：本环境无法挂 MCP，实测其 REST API（/api/v1/search + /api/v1/{id}?topic=）等价可用，已写入 AGENTS.md 作为框架文档实时查阅通道
+
 ## 6. 证据文件
 
 `.firecrawl/minimax-video.md`（API 契约全文）· `ark-models.md`（模型目录）· `seedance-json-prompt.md`（字段表）· `h3-prompt.md`（官方示例库）· `mpt.md` · `awesome-skills.md` · `minimax-cli.md`

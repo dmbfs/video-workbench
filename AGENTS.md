@@ -37,3 +37,4 @@
 ## 自检
 
 - 每个 UI 里程碑完成用 Playwright 截图自检；联网搜索一律 Firecrawl（key 在 `.env`）
+- 框架文档实时查阅走 Context7 REST API（本环境无法挂 MCP 客户端，效果等价）：先 `GET https://context7.com/api/v1/search?query=<库名>` 取 library id，再 `GET https://context7.com/api/v1/<id>?topic=<主题>&tokens=1500` 拉最新文档；已验证 magicui/aceternity 的 registry 安装命令均为最新

@@ -9,6 +9,7 @@
 | 海螺 hailuoai.video | 左侧栏 + 主创作区（Tab：视频/图片/Agent）+ 提示词框内嵌参数行（2K·5s·21:9）+ 画廊网格 | 工作台整体骨架、参数行内嵌模式 | **紫色主色**（命中红线）、营销横幅堆砌 |
 | 即梦 | 全屏视频背景 + 悬浮玻璃导航 + 巨字标题 | 深色沉浸底色思路、噪点+光斑替代纯平 | 中心大 Hero（命中红线）、全屏视频背景（本地工具无此必要） |
 | Pika | 奶油浅色 + 黑色大写粗标题；提示词条内嵌「5s chip + 模型选择器 + Generate」 | **提示词条模式**（流程 B 的核心交互原样借鉴）、时长/模型 chip 内嵌 | 浅色主调（PRD 已定深色） |
+| Google Flow (labs.google/flow) | Plan（项目级 Agent）→ Create（多模态输入混合）→ Refine（自然语言迭代编辑、改动可"缩放到整个项目"）三段式； Nano Banana 参考图保障主体一致性 | 产品叙事：Agent 窗口即我们的 Plan；「自然语言批量改全部分镜」列为 P1；参考一致性能力已在模型目录（Reference/首尾帧） | 登录墙后的 Scenebuilder 细节（后续真机再学） |
 
 ## 2. 设计红线（QA 清单，每轮 Playwright 截图自检逐条核对）
 
@@ -40,7 +41,9 @@
 
 ### 字体
 
-中文正文走系统栈（避免数 MB 中文字体）：`-apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", sans-serif`；拉丁标题与数字（时间码/额度数）用 **Space Grotesk**（Google Fonts，`font-display: swap`）；等宽（task id/日志）用 **JetBrains Mono**。层级：页标题 18–20px/600，卡片题 14px/500，正文 14px/400，辅助 12px。
+中文正文走系统栈（避免数 MB 中文字体）：`-apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", sans-serif`；拉丁标题与数字（时间码/额度数）用 **Bricolage Grotesque**（Google Fonts，`font-display: swap`；Anthropic 前端美学指南点名 Space Grotesk 已成 AI 生成收敛默认，故弃用）；等宽（task id/日志）用 **JetBrains Mono**。层级：页标题 18–20px/600，卡片题 14px/500，正文 14px/400，辅助 12px。
+
+**动效原则（Anthropic 美学指南）**：一次编排好的页面加载（staggered reveals）胜过零散微交互——首次进入工作台执行统一的进场编排（侧栏→提示词条→分镜卡片依次 40ms stagger），之后交互动效从简。
 
 ### 圆角/间距/阴影
 
@@ -80,6 +83,8 @@
 | `card-spotlight` | 项目卡片 | 鼠标跟随径向光 |
 | `tabs` | 创作/项目/设置 | 背景滑动动画 |
 | `text-generate-effect` | Agent 流式回复 | 逐字淡入与 SSE 增量合流 |
+
+**补充组件库结论**：**Magic UI**（16.4k★，React+Tailwind+Motion，`npx shadcn@latest add @magicui/<slug>` 同款 registry 装法）作为 Aceternity 的动画件补充库采用（marquee/shimmer/dot-pattern 等营销感克制使用）；**Mantine**（120+ 组件）与 **Radix Themes** 自带样式体系，与 Tailwind/shadcn 冲突，均不引入——Radix Primitives 已作为 shadcn 底层间接在用；**ui.glass** 抓取被阻且无 SSR，玻璃拟态效果用 `backdrop-filter: blur(16px)` + `--bg-panel` 透明变体自实现，零依赖。
 
 依赖：Tailwind CSS v4 + `motion`(framer-motion) + clsx + tailwind-merge。
 

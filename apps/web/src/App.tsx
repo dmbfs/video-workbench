@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Clapperboard, Plus, Settings } from "lucide-react";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Clapperboard, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import type { ProjectSummary } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
@@ -10,14 +11,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkbenchPage } from "@/pages/WorkbenchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import LandingPage from "@/pages/LandingPage";
 
-export default function App() {
+function AppShell() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [tab, setTab] = useState<string>("work");
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newRatio, setNewRatio] = useState<"16:9" | "9:16">("16:9");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab = location.pathname.startsWith("/settings") ? "settings" : "work";
 
   const refresh = () => api.listProjects().then(setProjects).catch(() => {});
   useEffect(() => { refresh(); }, []);
@@ -26,37 +30,34 @@ export default function App() {
     if (!newTitle.trim()) return;
     const { id } = await api.createProject({ title: newTitle.trim(), ratio: newRatio });
     setCreating(false); setNewTitle("");
-    await refresh(); setActiveId(id); setTab("work");
+    await refresh(); setActiveId(id); navigate("/app");
   };
 
   return (
     <div className="flex min-h-screen">
       <aside className="group w-14 hover:w-60 transition-all duration-300 [transition-timing-function:var(--ease-out-expo)] shrink-0 border-r border-border bg-card/60 backdrop-blur-sm flex flex-col overflow-hidden">
-        <div className="flex items-center gap-3 px-4 h-14 border-b border-border">
+        <button className="flex items-center gap-3 px-4 h-14 border-b border-border" onClick={() => navigate("/")}>
           <Clapperboard className="size-5 text-primary shrink-0" />
           <span className="font-display font-semibold text-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">vidstitch</span>
-        </div>
+        </button>
         <div className="p-3 space-y-1 flex-1 overflow-y-auto">
           {projects.map((p, i) => (
-            <button key={p.id} onClick={() => { setActiveId(p.id); setTab("work"); }}
+            <button key={p.id} onClick={() => { setActiveId(p.id); navigate("/app"); }}
               className={`rise-in w-full text-left rounded-md px-2 py-2 text-sm whitespace-nowrap truncate hover:bg-secondary ${activeId === p.id ? "bg-secondary text-primary-foreground" : "text-muted-foreground"}`}
               style={{ animationDelay: `${i * 40}ms` }}>
               {p.title}
             </button>
           ))}
         </div>
-        <div className="p-3 border-t border-border space-y-1">
+        <div className="p-3 border-t border-border">
           <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setCreating(true)}>
             <Plus className="size-4" /><span className="whitespace-nowrap">新建项目</span>
-          </Button>
-          <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setTab("settings")}>
-            <Settings className="size-4" /><span className="whitespace-nowrap">设置</span>
           </Button>
         </div>
       </aside>
 
       <main className="flex-1 min-w-0">
-        <Tabs value={tab} onValueChange={setTab} className="h-full">
+        <Tabs value={tab} onValueChange={(v) => navigate(v === "work" ? "/app" : "/settings")} className="h-full">
           <TabsList className="m-4 bg-secondary/70">
             <TabsTrigger value="work">创作</TabsTrigger>
             <TabsTrigger value="settings">设置</TabsTrigger>
@@ -97,5 +98,16 @@ export default function App() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/app" element={<AppShell />} />
+      <Route path="/settings" element={<AppShell />} />
+      <Route path="*" element={<AppShell />} />
+    </Routes>
   );
 }

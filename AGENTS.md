@@ -2,7 +2,7 @@
 
 ## 项目事实源
 
-- 产品需求与架构唯一事实源：`PRD.md`（当前 v1.0）；调研证据：`docs/RESEARCH.md` 与 `.firecrawl/`
+- 产品需求与架构唯一事实源：`PRD.md`（当前 v1.0）；视觉与交互规范：`docs/DESIGN.md`（UI 一律从其派生）；调研证据：`docs/RESEARCH.md` 与 `.firecrawl/`
 - 里程碑与验收标准以 PRD §9 为准；PRD 变更须同步本文件与任务计划
 
 ## 仓库布局
@@ -28,8 +28,7 @@
 
 ## 技能映射（开工前先读对应 SKILL.md）
 
-- 前端 UI：`skills/frontend-design/`（美学方向）+ `skills/frontend-ui-dark-ts/`（深色主题与设计令牌，references/ 含组件/令牌/模式三份参考）
-- 前端组件：`skills/shadcn-ui/`（resources/ 组件目录与定制指南，examples/ 有现成范例）
+- 前端 UI：`skills/frontend-design/`（美学方向）+ `skills/frontend-ui-dark-ts/`（深色主题与设计令牌）+ `skills/shadcn-ui/`（组件构建）；**所有视觉决策以 `docs/DESIGN.md` 为准**（含设计红线 QA 清单与 Aceternity 组件映射，安装走 `npx shadcn@latest add @aceternity/<name>`）
 - 后端与数据：`skills/fullstack-dev/`（REST 设计、实时特性、数据库集成；其中 MiniMax API 媒体生成部分与产品无关，忽略）
 - 自检验收：`skills/webapp-testing/`（Playwright 测试与截图）
 - 分镜脚本写作：不用通用技能；素材为 `.firecrawl/h3-prompt.md`（H3 官方示例库）、`.firecrawl/seedance-json-prompt.md`（Seedance JSON 字段结构）与 PRD §7.3 六要素模板；写系统提示词时可参考 Piebald-AI/claude-code-system-prompts（12.6k★）

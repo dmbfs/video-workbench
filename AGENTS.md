@@ -26,6 +26,15 @@
 - `skills/` 与 `AGENTS.md`、`PRD.md`、`docs/` 属项目资产，随代码一同提交
 - 单人单线开发：主分支直接提交，不建 worktree；将来上 GitHub 用同一套规则
 
+## 技能映射（开工前先读对应 SKILL.md）
+
+- 前端 UI：`skills/frontend-design/`（美学方向）+ `skills/frontend-ui-dark-ts/`（深色主题与设计令牌，references/ 含组件/令牌/模式三份参考）
+- 前端组件：`skills/shadcn-ui/`（resources/ 组件目录与定制指南，examples/ 有现成范例）
+- 后端与数据：`skills/fullstack-dev/`（REST 设计、实时特性、数据库集成；其中 MiniMax API 媒体生成部分与产品无关，忽略）
+- 自检验收：`skills/webapp-testing/`（Playwright 测试与截图）
+- 分镜脚本写作：不用通用技能；素材为 `.firecrawl/h3-prompt.md`（H3 官方示例库）、`.firecrawl/seedance-json-prompt.md`（Seedance JSON 字段结构）与 PRD §7.3 六要素模板；写系统提示词时可参考 Piebald-AI/claude-code-system-prompts（12.6k★）
+- 流程纪律：`skills/superpowers/`（writing-plans / executing-plans，见上节）
+
 ## 自检
 
 - 每个 UI 里程碑完成用 Playwright 截图自检；联网搜索一律 Firecrawl（key 在 `.env`）

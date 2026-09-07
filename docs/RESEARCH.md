@@ -41,6 +41,10 @@
 
 调研范围：claude-task-master（28k★）、github/spec-kit（133k★）、Fission-AI/OpenSpec（67k★）、bmad-code-org/BMAD-METHOD（52k★）、obra/superpowers（282k★），星标经 GitHub API 实抓。结论：**superpowers 精选安装**——`writing-plans` + `executing-plans` 两件核心（已存 `skills/superpowers/`）。取舍：task-master 的任务依赖图对 5 里程碑规模过剩且需 CLI+key；spec-kit/BMAD 仪式过重，二期新功能再评估。工作流已写入项目级 `AGENTS.md`。
 
+## 5b. 第二轮：开发类技能选型（已定）
+
+按工作类别 Firecrawl 调研 + GitHub API 核星，用户拍板全装五件：`anthropics/frontend-design`、`microsoft/frontend-ui-dark-ts`、`google-labs-code/stitch-skills` 之 shadcn-ui、`anthropics/webapp-testing`、`MiniMax-AI/fullstack-dev`（五仓星标：174.9k / 3k / 8.3k / 174.9k / 13.5k），连同配套 references/examples 共 13 文件存 `skills/`。否定结论两条：数据层无适配本地方案的高星技能（Neon/ClickHouse 系均为云厂商专属），由 fullstack-dev 数据库部分覆盖；分镜脚本写作不装通用 prompt 技能（prompt-architect 仅 294★），采领域专用素材方案（H3 示例库 + Seedance JSON 指南 + PRD 六要素模板），参考 Piebald-AI/claude-code-system-prompts（12.6k★）。映射表见项目 `AGENTS.md`。
+
 ## 6. 证据文件
 
 `.firecrawl/minimax-video.md`（API 契约全文）· `ark-models.md`（模型目录）· `seedance-json-prompt.md`（字段表）· `h3-prompt.md`（官方示例库）· `mpt.md` · `awesome-skills.md` · `minimax-cli.md`

@@ -46,7 +46,7 @@ scripts/e2e-m2.mjs                  # mock 全链路 E2E
 
 **Interfaces (Produces):** `interface ChatProvider { stream(messages: ChatMsg[], opts?: { json?: boolean }): AsyncIterable<string> }`；路由 `GET /api/projects/:id/messages`、`POST /api/projects/:id/chat {message}`（SSE: `chat_delta*` → `chat_done`）。SSE 新事件：`{type:"chat_delta",text}`、`{type:"chat_done",messageId}`、`{type:"storyboard_proposed",storyboard}`。
 
-- [ ] **Step 1: shared 增量**（追加到 `index.ts`）
+- [x] **Step 1: shared 增量**（追加到 `index.ts`）
 
 ```ts
 export const chatRoleSchema = z.enum(["user", "assistant", "system"]);
@@ -72,7 +72,7 @@ export type StoryboardProposal = z.infer<typeof storyboardProposalSchema>;
 
 同时给 `sseEventSchema` 判别联合追加三个成员：`chat_delta`/`chat_done`/`storyboard_proposed`。
 
-- [ ] **Step 2: `chat-types.ts`**
+- [x] **Step 2: `chat-types.ts`**
 
 ```ts
 export interface ChatMsg { role: "user" | "assistant" | "system"; content: string }
@@ -82,7 +82,7 @@ export interface ChatProvider {
 }
 ```
 
-- [ ] **Step 3: `chat-openai.ts`**（fetch 流式解析 SSE 行）
+- [x] **Step 3: `chat-openai.ts`**（fetch 流式解析 SSE 行）
 
 ```ts
 import type { ChatProvider, ChatMsg } from "./chat-types.js";
@@ -122,7 +122,7 @@ export class OpenAIChatProvider implements ChatProvider {
 }
 ```
 
-- [ ] **Step 4: `chat-mock.ts`**（脚本化：普通轮回复 1 句；json 请求回合法分镜 JSON，逐字 yield）
+- [x] **Step 4: `chat-mock.ts`**（脚本化：普通轮回复 1 句；json 请求回合法分镜 JSON，逐字 yield）
 
 ```ts
 import type { ChatProvider, ChatMsg } from "./chat-types.js";
@@ -151,7 +151,7 @@ export class MockChatProvider implements ChatProvider {
 }
 ```
 
-- [ ] **Step 5: `chat-factory.ts`** + `routes/chat.ts`
+- [x] **Step 5: `chat-factory.ts`** + `routes/chat.ts`
 
 factory：`getChatProvider(cfg)` 同 video factory 模式（openai-compatible→OpenAIChatProvider，mock→MockChatProvider）。
 
@@ -207,9 +207,9 @@ export async function chatRoutes(app: FastifyInstance) {
 }
 ```
 
-- [ ] **Step 6: 验证** typecheck 过；`curl -N -X POST :8787/api/projects/<id>/chat -d '{"message":"想要30秒城市日落"}'` 看到 chat_delta 流。
+- [x] **Step 6: 验证** typecheck 过；`curl -N -X POST :8787/api/projects/<id>/chat -d '{"message":"想要30秒城市日落"}'` 看到 chat_delta 流。
 
-- [ ] **Step 7: Commit** `feat(server): chat providers, sse chat route, history`
+- [x] **Step 7: Commit** `feat(server): chat providers, sse chat route, history`
 
 ---
 
@@ -219,7 +219,7 @@ export async function chatRoutes(app: FastifyInstance) {
 
 **Interfaces (Produces):** `POST /api/projects/:id/storyboard/propose` → `{storyboard}`（校验合法）；`POST /api/projects/:id/storyboard/apply` body=StoryboardProposal → `{segments:[...]}`（替换现有全部段并广播 `project_updated` 语义的 SSE——复用 `segment_status` 不够，新增 `timeline_replaced` 事件进 sseEventSchema）。
 
-- [ ] **Step 1: `agent/prompt.ts`**（质量核心，融合 Veo 解剖学 + H3 示例风格 + Seedance JSON 结构；七要素模板；澄清上限 3 问；JSON 协议）
+- [x] **Step 1: `agent/prompt.ts`**（质量核心，融合 Veo 解剖学 + H3 示例风格 + Seedance JSON 结构；七要素模板；澄清上限 3 问；JSON 协议）
 
 ```ts
 export const SYSTEM_PROMPT = `你是「分镜顾问」，帮用户把模糊想法变成 AI 视频的分镜脚本。
@@ -240,7 +240,7 @@ export const SYSTEM_PROMPT = `你是「分镜顾问」，帮用户把模糊想�
  "segments":[{"prompt":"七要素中文描述，末尾附 Negative: 负向约束(英文)","duration":10,"transitionOut":"cut"}]}`;
 ```
 
-- [ ] **Step 2: `routes/storyboard.ts`**
+- [x] **Step 2: `routes/storyboard.ts`**
 
 ```ts
 import type { FastifyInstance } from "fastify";
@@ -305,8 +305,8 @@ export async function storyboardRoutes(app: FastifyInstance) {
 
 sseEventSchema 同步追加 `timeline_replaced`。`index.ts` 注册 chatRoutes + storyboardRoutes。
 
-- [ ] **Step 3: 验证** mock 模型下 curl propose → 返回合法 JSON；apply → segments 3 行。
-- [ ] **Step 4: Commit** `feat(server): storyboard advisor prompt, propose/apply with zod guard`
+- [x] **Step 3: 验证** mock 模型下 curl propose → 返回合法 JSON；apply → segments 3 行。
+- [x] **Step 4: Commit** `feat(server): storyboard advisor prompt, propose/apply with zod guard`
 
 ---
 
@@ -320,9 +320,9 @@ sseEventSchema 同步追加 `timeline_replaced`。`index.ts` 注册 chatRoutes +
 - 顶栏按钮「生成完整分镜」→ 调 propose → 右栏浮出 `StoryboardProposal` 预览卡（标题/画幅/总时长/N 段列表）→「采用到时间线」调 apply（若已有段落，按钮文案变「替换现有 N 段并采用」）→ 成功后 `timeline_replaced`/手动 load 刷新分镜，预览卡收起。
 - 事件流：WorkbenchPage 现有 subscribeEvents 扩展处理 `storyboard_proposed`（打开预览卡）与 `timeline_replaced`（load()）。
 
-- [ ] **Step 1: 实现三文件**（完整代码按上述要点写，禁占位符）
-- [ ] **Step 2: `pnpm -C apps/web build` 过 + dev 手测 mock 对话全流程**
-- [ ] **Step 3: Commit** `feat(web): chat panel + storyboard proposal apply`
+- [x] **Step 1: 实现三文件**（完整代码按上述要点写，禁占位符）
+- [x] **Step 2: `pnpm -C apps/web build` 过 + dev 手测 mock 对话全流程**
+- [x] **Step 3: Commit** `feat(web): chat panel + storyboard proposal apply`
 
 ---
 
@@ -330,9 +330,9 @@ sseEventSchema 同步追加 `timeline_replaced`。`index.ts` 注册 chatRoutes +
 
 **Files:** Create `scripts/e2e-m2.mjs`
 
-- [ ] **Step 1: mock E2E**：M1 流程之外新增——对话窗输入"想要30秒城市日落宣传片"→发送→等助手回复；点「生成完整分镜」→预览卡出现→「采用到时间线」→3 张分镜卡出现→生成→导出→ffprobe 30s。截图 `m2-01-chat.png`、`m2-02-proposal.png`、`m2-03-applied.png`。
-- [ ] **Step 2: 真实模型冒烟**（用户填 key 且 `apiKeySet` 为真时执行）：propose 一次真实请求，校验返回 JSON 合法；把真实调用次数与耗时打出来（预计 1–2 次 LLM 调用，无视频生成费用）。
-- [ ] **Step 3: Commit** `test(e2e): m2 chat full-chain` + `docs: mark M2 done`
+- [x] **Step 1: mock E2E**：M1 流程之外新增——对话窗输入"想要30秒城市日落宣传片"→发送→等助手回复；点「生成完整分镜」→预览卡出现→「采用到时间线」→3 张分镜卡出现→生成→导出→ffprobe 30s。截图 `m2-01-chat.png`、`m2-02-proposal.png`、`m2-03-applied.png`。
+- [x] **Step 2: 真实模型冒烟**（用户填 key 且 `apiKeySet` 为真时执行）：propose 一次真实请求，校验返回 JSON 合法；把真实调用次数与耗时打出来（预计 1–2 次 LLM 调用，无视频生成费用）。
+- [x] **Step 3: Commit** `test(e2e): m2 chat full-chain` + `docs: mark M2 done`
 
 ## Self-Review 记录
 

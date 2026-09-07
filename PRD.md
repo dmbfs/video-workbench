@@ -156,7 +156,7 @@ pnpm monorepo · 全 TypeScript：`apps/web` React18+Vite+Tailwind+shadcn/ui+Zus
 |---|---|---|
 | M0 | PRD 定稿 | ✅ 完成：模型 ID/API 契约核实、同类项目与 skill 调研（docs/RESEARCH.md） |
 | M1 | monorepo 脚手架 + 设置页 + Mock 全链路 | ✅ 完成（commit bf15cdc）：E2E PASS · final.mp4=30.0s · 截图 screenshots/m1-0*.png |
-| M2 | Agent 窗口接真实 OpenAI 兼容 chat | 对话产出合规分镜 JSON 并可编辑保存（需您提供 base_url/model/key） |
+| M2 | Agent 窗口接真实 OpenAI 兼容 chat | ✅ 完成：mock E2E PASS(final=30.0s) + 真实模型冒烟 PASS（glm-5.3-flash，4 段合法分镜 50.9s）；截图 screenshots/m2-0*.png |
 | M3 | 真实视频 provider + 编排 + SSE 进度 + 单段重生成 | 有 key 即插即用；无 key 保持 mock |
 | M4 | 导出转场/历史完善 | 成品 mp4 正常播放，项目管理闭环 |
 | M5 | 整体验收 | 全流程走查 + 截图交付 |

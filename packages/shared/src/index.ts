@@ -54,6 +54,10 @@ export const sseEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("export_progress"),
     stage: z.enum(["normalizing", "concatenating", "done"]), pct: z.number().min(0).max(100) }),
   z.object({ type: z.literal("final_ready"), url: z.string() }),
+  z.object({ type: z.literal("chat_delta"), text: z.string() }),
+  z.object({ type: z.literal("chat_done"), messageId: z.string() }),
+  z.object({ type: z.literal("storyboard_proposed"), storyboard: z.any() }),
+  z.object({ type: z.literal("timeline_replaced"), projectId: z.string() }),
 ]);
 export type SseEvent = z.infer<typeof sseEventSchema>;
 
@@ -65,3 +69,23 @@ export const patchSegmentSchema = z.object({
 });
 export const exportSchema = z.object({ crossfadeMs: z.number().int().min(0).max(2000).default(0) });
 export const updateSettingsSchema = settingsSchema;
+
+export const chatRoleSchema = z.enum(["user", "assistant", "system"]);
+export const chatMessageSchema = z.object({
+  id: z.string(), projectId: z.string(), role: chatRoleSchema,
+  content: z.string(), createdAt: z.string(),
+});
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+export const storyboardProposalSchema = z.object({
+  title: z.string().min(1).max(30),
+  ratio: ratioSchema,
+  withAudio: z.boolean(),
+  stylePrefix: z.string().min(1),
+  segments: z.array(z.object({
+    prompt: z.string().min(10),
+    duration: z.number().int().min(4).max(30),
+    transitionOut: transitionSchema.default("cut"),
+  })).min(1).max(6),
+}).refine((s) => s.segments.reduce((a, x) => a + x.duration, 0) <= 60, { message: "总时长超过 60s" });
+export type StoryboardProposal = z.infer<typeof storyboardProposalSchema>;

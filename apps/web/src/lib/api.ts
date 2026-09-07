@@ -25,6 +25,13 @@ export const api = {
   saveSettings: (s: unknown) =>
     fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) }).then(j),
   testProvider: (id: string) => fetch(`/api/providers/${id}/test`, { method: "POST" }).then(j),
+  getMessages: (pid: string) => fetch(`/api/projects/${pid}/messages`).then(j),
+  chat: (pid: string, message: string) =>
+    fetch(`/api/projects/${pid}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message }) }),
+  proposeStoryboard: (pid: string) =>
+    fetch(`/api/projects/${pid}/storyboard/propose`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(j),
+  applyProposal: (pid: string, sb: unknown) =>
+    fetch(`/api/projects/${pid}/storyboard/apply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sb) }).then(j),
 };
 
 export function subscribeEvents(pid: string, on: (e: SseEvent) => void) {

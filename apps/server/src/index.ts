@@ -8,6 +8,8 @@ import { projectRoutes } from "./routes/projects.js";
 import { segmentRoutes } from "./routes/segments.js";
 import { eventRoutes } from "./routes/events.js";
 import { exportRoutes } from "./routes/export.js";
+import { chatRoutes } from "./routes/chat.js";
+import { storyboardRoutes } from "./routes/storyboard.js";
 
 const app = Fastify({ logger: false, bodyLimit: 32 * 1024 * 1024 });
 
@@ -23,6 +25,8 @@ await app.register(projectRoutes);
 await app.register(segmentRoutes);
 await app.register(eventRoutes);
 await app.register(exportRoutes);
+await app.register(chatRoutes);
+await app.register(storyboardRoutes);
 
 await app.listen({ port: 8787, host: "127.0.0.1" });
 console.log("vidstitch server on :8787");

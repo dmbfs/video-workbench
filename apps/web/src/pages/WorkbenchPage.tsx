@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { api, subscribeEvents } from "@/lib/api";
-import type { Segment, SegmentStatus } from "@vidstitch/shared";
+import type { Segment, SegmentStatus, StoryboardProposal } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ChatPanel } from "@/components/ChatPanel";
+import { StoryboardProposalCard } from "@/components/StoryboardProposal";
 
 const STATUS_TEXT: Record<SegmentStatus, string> = {
   pending: "排队中", generating: "出片中", succeeded: "好了", failed: "翻车了",
@@ -20,6 +22,9 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [proposal, setProposal] = useState<StoryboardProposal | null>(null);
+  const [proposing, setProposing] = useState(false);
+  const [applying, setApplying] = useState(false);
   const ref = useRef(projectId);
 
   const load = useCallback(() => {
@@ -35,8 +40,26 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
       setSegments((ss) => ss.map((s) => (s.id === e.segmentId ? { ...s, status: e.status, error: e.error } : s)));
     } else if (e.type === "final_ready") {
       setExportUrl(e.url); setExporting(false);
+    } else if (e.type === "storyboard_proposed") {
+      setProposal(e.storyboard as StoryboardProposal);
+    } else if (e.type === "timeline_replaced") {
+      load();
     }
-  }), []);
+  }), [load]);
+
+  const propose = async () => {
+    setProposing(true);
+    try { const r = (await api.proposeStoryboard(ref.current)) as { storyboard: StoryboardProposal }; setProposal(r.storyboard); }
+    catch (e) { setProposal(null); alert(`生成失败：${(e as Error).message.slice(0, 160)}`); }
+    finally { setProposing(false); }
+  };
+  const apply = async () => {
+    if (!proposal) return;
+    setApplying(true);
+    try { await api.applyProposal(ref.current, proposal); setProposal(null); load(); }
+    catch (e) { alert(`采用失败：${(e as Error).message.slice(0, 160)}`); }
+    finally { setApplying(false); }
+  };
 
   const addSegment = async () => {
     if (!prompt.trim()) return;
@@ -55,7 +78,11 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="flex gap-5 h-[calc(100vh-8.5rem)]">
+      <div className="w-[380px] shrink-0 rounded-xl border border-border overflow-hidden rise-in">
+        <ChatPanel projectId={projectId} onPropose={propose} proposing={proposing} />
+      </div>
+      <div className="flex-1 min-w-0 overflow-y-auto space-y-5 pr-1">
       <header className="rise-in">
         <h1 className="font-display text-xl font-semibold">{title || "未命名项目"}</h1>
         <p className="text-sm text-muted-foreground font-mono">
@@ -138,6 +165,12 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
           <h2 className="font-display font-semibold">成片出炉，直接去发</h2>
           <video controls src={exportUrl} className="w-full max-w-3xl rounded-xl border border-border" />
         </div>
+      )}
+      </div>
+
+      {proposal && (
+        <StoryboardProposalCard sb={proposal} existingCount={segments.length} applying={applying}
+          onApply={apply} onClose={() => setProposal(null)} />
       )}
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

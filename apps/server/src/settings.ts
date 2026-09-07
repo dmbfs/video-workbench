@@ -18,6 +18,13 @@ export function getSettings(): Settings {
 
 export function saveSettings(s: Settings): Settings {
   const parsed = settingsSchema.parse(s);
+  // 前端永远拿不到明文 key，回传时 apiKey 为空 → 保留旧值（按 id 匹配）
+  const old = getSettings();
+  parsed.providers = parsed.providers.map((p) => {
+    if (p.apiKey) return p;
+    const prev = old.providers.find((o) => o.id === p.id);
+    return prev?.apiKey ? { ...p, apiKey: prev.apiKey } : p;
+  });
   db.prepare("INSERT INTO settings(key,json) VALUES('settings',?) ON CONFLICT(key) DO UPDATE SET json=excluded.json")
     .run(JSON.stringify(parsed));
   return parsed;

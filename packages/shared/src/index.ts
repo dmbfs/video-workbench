@@ -22,6 +22,7 @@ export type PublicSettings = Omit<Settings, "providers"> & {
 export const ratioSchema = z.enum(["16:9", "9:16"]);
 export const transitionSchema = z.enum(["cut", "fade"]);
 export const segmentStatusSchema = z.enum(["pending", "generating", "succeeded", "failed"]);
+export type SegmentStatus = z.infer<typeof segmentStatusSchema>;
 
 export const segmentSchema = z.object({
   id: z.string(), projectId: z.string(), idx: z.number().int().min(1),

@@ -4,6 +4,7 @@ import type { SseEvent } from "@vidstitch/shared";
 const clients = new Map<string, Set<FastifyReply>>(); // projectId -> replies；"*" 为全局通道
 
 export function addClient(projectId: string | "*", reply: FastifyReply) {
+  reply.hijack(); // 此连接由我们接管，Fastify 不再写响应
   reply.raw.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",

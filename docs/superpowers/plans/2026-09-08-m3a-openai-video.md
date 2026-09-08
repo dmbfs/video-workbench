@@ -19,16 +19,16 @@
 ## Tasks
 
 ### Task 1: 适配器与后端接线
-- [ ] shared：providerKindSchema 增 `"openai-video"`
-- [ ] `providers/openai-video.ts`：createTask（POST /videos：model/prompt/seconds/size/audio/image→400 降级重试）、pollTask（GET /videos/{id}：queued/in_progress/completed/failed → videoRef=`{base}/videos/{id}/content` + downloadHeaders）、capabilities（30s/imageToVideo/audio）
-- [ ] shared PollResult 增 `downloadHeaders?: Record<string,string>`；orchestrator resolveVideoRef 透传
-- [ ] factory：openai-video 分支；settings.ts 测试路由：openai-video → GET {base}/models
-- [ ] 验证：typecheck + 对用户网关跑 provider 测试（/models 200 即通过）；Commit `feat(server): openai-compatible video provider (/v1/videos)`
+- [x] shared：providerKindSchema 增 `"openai-video"`
+- [x] `providers/openai-video.ts`：createTask（POST /videos：model/prompt/seconds/size/audio/image→400 降级重试）、pollTask（GET /videos/{id}：queued/in_progress/completed/failed → videoRef=`{base}/videos/{id}/content` + downloadHeaders）、capabilities（30s/imageToVideo/audio）
+- [x] shared PollResult 增 `downloadHeaders?: Record<string,string>`；orchestrator resolveVideoRef 透传
+- [x] factory：openai-video 分支；settings.ts 测试路由：openai-video → GET {base}/models
+- [x] 验证：typecheck + 对用户网关跑 provider 测试（/models 200 即通过）；Commit `feat(server): openai-compatible video provider (/v1/videos)`
 
 ### Task 2: 前端 + E2E 回归
-- [ ] SettingsPage KIND_LABEL 增「OpenAI 兼容（视频）」；视频默认下拉包含 openai-video
-- [ ] `e2e.mjs`/`e2e-m2b.mjs` 回归（mock 链路不受影响）；设置页手测新类型连通测试显示「通了」
-- [ ] RESEARCH.md 记录网关探测结论与契约来源；PRD §7.7 加一行；Commit `feat(web): openai-video kind ui; e2e regression`
+- [x] SettingsPage KIND_LABEL 增「OpenAI 兼容（视频）」；视频默认下拉包含 openai-video
+- [x] `e2e.mjs`/`e2e-m2b.mjs` 回归（mock 链路不受影响）；设置页手测新类型连通测试显示「通了」
+- [x] RESEARCH.md 记录网关探测结论与契约来源；PRD §7.7 加一行；Commit `feat(web): openai-video kind ui; e2e regression`
 
 ## Self-Review
 1. 需求覆盖：自定义 OpenAI 兼容视频模型（base_url/model_id/key 全配置化、契约标准）✓；首帧接力经 `image` 字段 ✓。

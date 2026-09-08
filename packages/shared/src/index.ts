@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const providerKindSchema = z.enum(["openai-compatible", "minimax", "seedance", "mock"]);
+export const providerKindSchema = z.enum(["openai-compatible", "openai-video", "minimax", "seedance", "mock"]);
 export type ProviderKind = z.infer<typeof providerKindSchema>;
 
 export const providerConfigSchema = z.object({

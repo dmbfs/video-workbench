@@ -8,6 +8,8 @@ export interface PollResult {
   status: "queued" | "running" | "succeeded" | "failed";
   /** http(s) URL 或本地绝对路径，orchestrator 统一落地 */
   videoRef?: string; error?: string;
+  /** 下载 videoRef 需要携带的请求头（如网关 content 端点的 Bearer） */
+  downloadHeaders?: Record<string, string>;
 }
 export interface VideoProvider {
   kind: string;

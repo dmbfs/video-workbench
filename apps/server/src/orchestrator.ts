@@ -74,17 +74,18 @@ class Orchestrator {
       this.setStatus(segmentId, { taskId });
 
       let videoRef: string | undefined;
+      let downloadHeaders: Record<string, string> | undefined;
       for (;;) {
         await new Promise((r) => setTimeout(r, 1500));
         const poll = await provider.pollTask(taskId);
-        if (poll.status === "succeeded") { videoRef = poll.videoRef; break; }
+        if (poll.status === "succeeded") { videoRef = poll.videoRef; downloadHeaders = poll.downloadHeaders; break; }
         if (poll.status === "failed") throw new Error(poll.error ?? "provider failed");
       }
 
       const destDir = path.join(dataRoot, "projects", s.projectId, "segments");
       mkdirSync(destDir, { recursive: true });
       const dest = path.join(destDir, `${segmentId}.mp4`);
-      await resolveVideoRef(videoRef!, dest);
+      await resolveVideoRef(videoRef!, dest, downloadHeaders);
       this.setStatus(segmentId, { status: "succeeded", videoPath: dest, error: null });
     } catch (e) {
       const msg = (e as Error).message.slice(0, 300);
@@ -97,9 +98,9 @@ class Orchestrator {
   }
 }
 
-async function resolveVideoRef(ref: string, dest: string) {
+async function resolveVideoRef(ref: string, dest: string, headers?: Record<string, string>) {
   if (/^https?:/.test(ref)) {
-    const r = await fetch(ref);
+    const r = await fetch(ref, { headers });
     if (!r.ok) throw new Error("download " + r.status);
     writeFileSync(dest, Buffer.from(await r.arrayBuffer()));
   } else {

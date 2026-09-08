@@ -15,6 +15,7 @@ type Draft = {
 
 const KIND_LABEL: Record<ProviderKind, string> = {
   "openai-compatible": "OpenAI 兼容（对话）",
+  "openai-video": "OpenAI 兼容（视频）",
   minimax: "MiniMax（视频）",
   seedance: "Seedance（视频）",
   mock: "Mock（本地演示）",
@@ -58,7 +59,7 @@ export function SettingsPage() {
   };
 
   const chatProviders = drafts.filter((d) => d.kind === "openai-compatible" || d.kind === "mock");
-  const videoProviders = drafts.filter((d) => d.kind === "minimax" || d.kind === "seedance" || d.kind === "mock");
+  const videoProviders = drafts.filter((d) => d.kind === "minimax" || d.kind === "seedance" || d.kind === "openai-video" || d.kind === "mock");
 
   return (
     <div className="max-w-4xl space-y-4">

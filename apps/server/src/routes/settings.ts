@@ -25,6 +25,14 @@ export async function settingsRoutes(app: FastifyInstance) {
         return { ok: false, error: (e as Error).message.slice(0, 200) };
       }
     }
+    if (p.kind === "openai-video") {
+      try {
+        const r = await fetch(`${p.baseUrl}/models`, { headers: { Authorization: `Bearer ${p.apiKey}` } });
+        return { ok: r.ok, status: r.status };
+      } catch (e) {
+        return { ok: false, error: (e as Error).message.slice(0, 200) };
+      }
+    }
     return { ok: true, kind: p.kind }; // mock 直接通过；minimax/seedance 真实验证在 M3
   });
 }

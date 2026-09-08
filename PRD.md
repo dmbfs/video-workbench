@@ -143,6 +143,7 @@ GET      /files/*                            成品/分段视频静态服务
 | `MiniMax-H3` / `MiniMax-H3-Max`（api.minimax.io） | 4–15s / 5–15s | 首尾帧双端、Reference 角色一致性、2K |
 | `doubao-seedance-2-0-*`（火山引擎国内） | 4–15s | 同 2.0；注意无 `-pro` SKU，ID 随 host 前缀变化 |
 | `mock`（本地 ffmpeg 合成） | 任意 | 无 key 全链路演示与验收 |
+| `openai-video`（任意 /v1/videos 兼容网关） | 4–30s | 首帧接力走 image 字段、audio 开关、鉴权下载 |
 
 ## 8. 技术栈（我的推荐，待联网验证后定稿）
 

@@ -12,3 +12,5 @@ export const POLL_INTERVAL_MS = envInt("VIDSTITCH_POLL_INTERVAL_MS", 1500);
 export const POLL_TIMEOUT_MS = envInt("VIDSTITCH_POLL_TIMEOUT_MS", 10 * 60_000);
 /** 单个项目允许创建的付费视频任务总数（含重试） */
 export const MAX_CALLS_PER_PROJECT = envInt("VIDSTITCH_MAX_CALLS_PER_PROJECT", 30);
+/** 连续多少段终态失败后熔断该项目的排队任务 */
+export const BREAKER_FAILURE_THRESHOLD = envInt("VIDSTITCH_BREAKER_FAILURE_THRESHOLD", 3);

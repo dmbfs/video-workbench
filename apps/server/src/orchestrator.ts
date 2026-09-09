@@ -4,7 +4,7 @@ import { db, dataRoot } from "./db.js";
 import { getSettings } from "./settings.js";
 import { getVideoProvider } from "./providers/factory.js";
 import { broadcast } from "./sse.js";
-import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT } from "./config.js";
+import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT, BREAKER_FAILURE_THRESHOLD } from "./config.js";
 import type { ProviderConfig, Segment, SegmentStatus } from "@vidstitch/shared";
 
 /** 不该重试的失败：重试会重复创建付费任务，或永远等不到结果 */
@@ -26,11 +26,19 @@ class Orchestrator {
   private queue: string[] = [];
   private active = 0;
   concurrency = 2;
+  /** projectId -> 连续终态失败段数（成功即清零） */
+  private failureStreak = new Map<string, number>();
+  /** 已熔断的项目：排队中的段不再启动 */
+  private tripped = new Set<string>();
 
   enqueue(segmentId: string) {
-    db.prepare("UPDATE segments SET status='pending', error=NULL, task_id=NULL WHERE id=?").run(segmentId);
     const s = this.seg(segmentId);
-    if (s) broadcast({ type: "segment_status", segmentId, status: "pending" }, s.projectId);
+    if (!s) return;
+    // 手动（重新）生成视为重置该项目的熔断状态
+    this.tripped.delete(s.projectId);
+    this.failureStreak.set(s.projectId, 0);
+    db.prepare("UPDATE segments SET status='pending', error=NULL, task_id=NULL WHERE id=?").run(segmentId);
+    broadcast({ type: "segment_status", segmentId, status: "pending" }, s.projectId);
     this.queue.push(segmentId);
     this.pump();
   }
@@ -69,6 +77,7 @@ class Orchestrator {
   private async run(segmentId: string, attempt = 1): Promise<void> {
     const s = this.seg(segmentId);
     if (!s) return;
+    if (this.tripped.has(s.projectId)) return;
     const sb = db.prepare("SELECT ratio, with_audio FROM storyboards WHERE project_id=?").get(s.projectId) as
       | { ratio: "16:9" | "9:16"; with_audio: number }
       | undefined;
@@ -117,6 +126,7 @@ class Orchestrator {
       const dest = path.join(destDir, `${segmentId}.mp4`);
       await resolveVideoRef(videoRef!, dest, downloadHeaders);
       this.setStatus(segmentId, { status: "succeeded", videoPath: dest, error: null });
+      this.failureStreak.set(s.projectId, 0);
     } catch (e) {
       const err = e as Error;
       const msg = err.message.slice(0, 300);
@@ -125,6 +135,24 @@ class Orchestrator {
         return this.run(segmentId, attempt + 1);
       }
       this.setStatus(segmentId, { status: "failed", error: msg });
+      this.noteFailure(s.projectId, msg);
+    }
+  }
+
+  /** 累计连续失败；达阈值则熔断该项目，清空排队段并标记失败 */
+  private noteFailure(projectId: string, lastError: string) {
+    const streak = (this.failureStreak.get(projectId) ?? 0) + 1;
+    this.failureStreak.set(projectId, streak);
+    if (streak < BREAKER_FAILURE_THRESHOLD || this.tripped.has(projectId)) return;
+    this.tripped.add(projectId);
+    const queued = this.queue.filter((id) => this.seg(id)?.projectId === projectId);
+    if (queued.length === 0) return;
+    this.queue = this.queue.filter((id) => this.seg(id)?.projectId !== projectId);
+    for (const id of queued) {
+      this.setStatus(id, {
+        status: "failed",
+        error: `已熔断：连续 ${streak} 段生成失败（最近一次：${lastError}），本项目剩余 ${queued.length} 段未执行。请检查 provider 配置或余额后重新生成`,
+      });
     }
   }
 }

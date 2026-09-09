@@ -107,7 +107,7 @@ function Hero() {
               <span className="mask-wrap">
                 <span className="mask-line" style={{ animationDelay: "0.26s" }}>
                   <span className="bg-gradient-to-r from-orange-400 via-orange-500 to-amber-200 bg-clip-text text-transparent">
-                    变成一条能发的片
+                    变成一条能发的视频
                   </span>
                 </span>
               </span>

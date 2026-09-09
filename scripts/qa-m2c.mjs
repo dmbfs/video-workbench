@@ -54,7 +54,7 @@ try {
   if (emoji.length) issues.push("文案含 emoji: " + emoji.join("|"));
 
   // 渐变 H1 与 CTA
-  if (!await page.getByText("变成一条能发的片").first().evaluate(el => el.className.includes("bg-clip-text"))) issues.push("H1 渐变缺失");
+  if (!await page.getByText("变成一条能发的视频").first().evaluate(el => el.className.includes("bg-clip-text"))) issues.push("H1 渐变缺失");
   const lock = await page.getByText("本地运行 · Key 自理").count();
   if (!lock) issues.push("Navbar Lock 徽章缺失");
 

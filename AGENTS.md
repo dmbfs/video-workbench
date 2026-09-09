@@ -4,6 +4,7 @@
 
 - 产品需求与架构唯一事实源：`PRD.md`（当前 v1.0）；视觉与交互规范：`docs/DESIGN.md`（UI 一律从其派生）；调研证据：`docs/RESEARCH.md` 与 `.firecrawl/`
 - 里程碑与验收标准以 PRD §9 为准；PRD 变更须同步本文件与任务计划
+- 生成循环硬边界（轮询超时 / 单项目调用上限 / 连续失败熔断）以 PRD §6 为准，实现见 `apps/server/src/config.ts` 与 `orchestrator.ts`
 
 ## 仓库布局
 

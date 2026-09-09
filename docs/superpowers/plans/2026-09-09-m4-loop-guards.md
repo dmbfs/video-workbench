@@ -22,34 +22,37 @@
 
 ## Task 1: 轮询 deadline（停止条件）
 
-- [ ] `apps/server/src/config.ts`：新增 `POLL_INTERVAL_MS` / `POLL_TIMEOUT_MS` 环境变量读取
-- [ ] `orchestrator.ts`：`for(;;)` 改为带 deadline 的轮询；超时抛不可重试错误
-- [ ] 验证：`pnpm --filter @vidstitch/server typecheck`
-- [ ] Commit `feat(server): poll deadline for video generation`
+- [x] `apps/server/src/config.ts`：新增 `POLL_INTERVAL_MS` / `POLL_TIMEOUT_MS` 环境变量读取
+- [x] `orchestrator.ts`：`for(;;)` 改为带 deadline 的轮询；超时抛不可重试错误
+- [x] 验证：`pnpm --filter @vidstitch/server typecheck`
+- [x] Commit `b2b077e feat(server): poll deadline for video generation`
 
 ## Task 2: 单项目调用预算
 
-- [ ] `db.ts`：新增 `generation_calls` 表 + project 索引
-- [ ] `config.ts`：新增 `MAX_CALLS_PER_PROJECT`
-- [ ] `orchestrator.ts`：createTask 前查预算（超限直接终态失败）、成功后记账
-- [ ] `routes/projects.ts`：删除项目时清理记账；详情与 generate-all 回传 `calls`/`maxCalls`
-- [ ] 验证：typecheck
-- [ ] Commit `feat(server): per-project generation call budget`
+- [x] `db.ts`：新增 `generation_calls` 表 + project 索引
+- [x] `config.ts`：新增 `MAX_CALLS_PER_PROJECT`
+- [x] `orchestrator.ts`：createTask 前查预算（超限直接终态失败）、成功后记账
+- [x] `routes/projects.ts`：删除项目时清理记账；详情与 generate-all 回传 `calls`/`maxCalls`
+- [x] 验证：typecheck
+- [x] Commit `addf9e2 feat(server): per-project generation call budget`
 
 ## Task 3: 连续失败熔断
 
-- [ ] `config.ts`：新增 `BREAKER_FAILURE_THRESHOLD`
-- [ ] `orchestrator.ts`：终态失败累计、成功清零、达阈值清空该项目队列并标记失败；enqueue 重置熔断
-- [ ] 验证：typecheck
-- [ ] Commit `feat(server): circuit breaker for consecutive generation failures`
+- [x] `config.ts`：新增 `BREAKER_FAILURE_THRESHOLD`
+- [x] `orchestrator.ts`：终态失败累计、成功清零、达阈值清空该项目队列并标记失败；enqueue 重置熔断
+- [x] 验证：typecheck
+- [x] Commit `0b98afd feat(server): circuit breaker for consecutive generation failures`
+- [x] 补 `c39b312 fix(server): settle in-flight segment when breaker trips`（验收脚本发现重试中的段会停在 generating）
 
 ## Task 4: 验收与文档
 
-- [ ] 目标验证脚本（临时）：cap=2 时第 3 段被预算拦截；threshold=1 + 坏 provider 时队列被熔断；poll timeout=1s 时超时失败且只计 1 次调用
-- [ ] `pnpm e2e` mock 全链路 PASS
-- [ ] PRD §6/§10 补条目；AGENTS.md 同步一句
-- [ ] 删除临时脚本
-- [ ] Commit `docs: record generation loop guards`
+- [x] 目标验证脚本（临时）：cap=2 时第 3 段被预算拦截；threshold=1 + 坏 provider 时队列被熔断；poll timeout=1s 时超时失败且只计 1 次调用 —— 三项 PASS
+- [x] API 全链路回归：3 段 mock 生成 + 导出 final.mp4 = 30.04s
+- [x] Playwright 全链路：E2E PASS · final.mp4 = 30.0s
+  - 注：`scripts/e2e.mjs` 因 FR-9 成本确认弹窗已过时，补一行确认点击（`febba78`）
+- [x] PRD §6/§10 补条目；AGENTS.md 同步一句
+- [x] 删除临时脚本
+- [x] Commit `docs: record generation loop guards`
 
 ## Self-Review
 

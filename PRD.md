@@ -56,6 +56,7 @@
 - 单机运行，数据与视频落在项目目录 `./data`；无登录
 - Mock provider 走通全链路（合成测试视频），无 key 也能开发与演示
 - 视频模型单段时长上限各不相同，适配器暴露 `maxSegmentDuration`，编排器自动截断或提示
+- 生成循环有硬边界：单段轮询超时默认 10 分钟（超时不再重试）、单项目付费任务上限默认 30 次、连续 3 段终态失败即熔断该项目排队任务；分别可用 `VIDSTITCH_POLL_TIMEOUT_MS` / `VIDSTITCH_MAX_CALLS_PER_PROJECT` / `VIDSTITCH_BREAKER_FAILURE_THRESHOLD` 覆盖
 - 密钥存储于本地配置文件（单机场景）；不做云端加密体系（SaaS 属二期）
 
 ## 7. 技术架构
@@ -166,7 +167,7 @@ pnpm monorepo · 全 TypeScript：`apps/web` React18+Vite+Tailwind+shadcn/ui+Zus
 
 ## 10. 风险与对策
 
-跨段一致性漂移 → 首尾帧接力 + style_prefix + 单段重跑兜底；chat 模型 JSON 输出不稳 → JSON 模式 + zod 校验 + 自动重问；各家模型单段时长上限不一 → 适配器能力声明 + 编排器拆分；浏览器 CORS/下载限制 → 全部网络与 ffmpeg 操作收口在后端。
+跨段一致性漂移 → 首尾帧接力 + style_prefix + 单段重跑兜底；chat 模型 JSON 输出不稳 → JSON 模式 + zod 校验 + 自动重问；各家模型单段时长上限不一 → 适配器能力声明 + 编排器拆分；浏览器 CORS/下载限制 → 全部网络与 ffmpeg 操作收口在后端；provider 挂起/故障 → 轮询超时 + 单项目调用上限 + 连续失败熔断，避免无限等待与成倍计费。
 
 ## 11. 待定项
 

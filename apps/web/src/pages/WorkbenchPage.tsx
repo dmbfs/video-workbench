@@ -10,6 +10,7 @@ import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { ChatPanel } from "@/components/ChatPanel";
 import { StoryboardProposalCard } from "@/components/StoryboardProposal";
+import { CostConfirmModal } from "@/components/CostConfirmModal";
 
 const STATUS_TEXT: Record<SegmentStatus, string> = {
   pending: "排队中", generating: "出片中", succeeded: "好了", failed: "翻车了",
@@ -24,6 +25,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
   const [proposal, setProposal] = useState<StoryboardProposal | null>(null);
   const [proposing, setProposing] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -154,7 +156,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
 
       {/* 底部操作条 */}
       <div className="rise-in flex items-center gap-3" style={{ animationDelay: "160ms" }}>
-        <ShimmerButton onClick={generateAll} disabled={generating || segments.length === 0}
+        <ShimmerButton onClick={() => setCostOpen(true)} disabled={generating || segments.length === 0}
           background="#F97316" shimmerColor="#FDBA74"
           className="h-10 px-5 text-sm font-medium text-primary-foreground">
           {generating && <Loader2 className="size-4 animate-spin" />} 生成全部
@@ -178,6 +180,14 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
         <StoryboardProposalCard sb={proposal} existingCount={segments.length} applying={applying}
           onApply={apply} onClose={() => setProposal(null)} />
       )}
+
+      {/* PRD FR-9：生成前成本确认（spec §五 算盘弹窗） */}
+      <CostConfirmModal
+        open={costOpen} onOpenChange={setCostOpen}
+        segmentCount={segments.length} totalDuration={totalDur}
+        generating={generating}
+        onConfirm={() => { setCostOpen(false); generateAll(); }}
+      />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-md">

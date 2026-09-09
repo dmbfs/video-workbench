@@ -109,3 +109,23 @@ body::after {
 /* 一次编排式进场（红线⑦合规），子元素用 animation-delay 递增 */
 @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .rise-in { animation: rise-in 0.4s var(--ease-out-expo) backwards; }
+
+/* Vesper 式 H1 遮罩揭幕（v1.1）：外层裁切、内层 112% 上滑 */
+.mask-wrap { display: block; overflow: hidden; padding: 0.08em 0.12em; margin: -0.08em -0.12em; }
+.mask-line { display: block; animation: mask-rise 0.7s var(--ease-out-expo) backwards; }
+@keyframes mask-rise { from { transform: translateY(112%); } }
+
+/* 液态高光扫过（hover 一次性位移，expo-out） */
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  transform: translateX(-130%); transition: transform 0.65s var(--ease-out-expo);
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.35) 50%, transparent 76%);
+}
+.btn-shine:hover::after { transform: translateX(130%); }
+
+/* 全局 reduced-motion 兜底：内容进场/呼吸/扫光全部静止，粒子层自行单帧 */
+@media (prefers-reduced-motion: reduce) {
+  .rise-in, .mask-line, .breathe { animation: none; }
+  .btn-shine::after { transition: none; transform: none; }
+}

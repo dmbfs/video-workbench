@@ -64,6 +64,8 @@
 [ L4 暗角 ]      径向渐变四周压向 --bg-base（中心 35% 起，边缘 .92）
 [ L3 噪点 ]      全局 body::before 3.5% SVG feTurbulence —— 组件内不得重复铺噪点
 [ L2 流光 ]      1px 橙色流光沿网格轴线平移（竖 7s / 横 9s，linear）
+[ L2.5 粒子 ]    canvas 2D sprite 辉光微粒（零依赖非 WebGL）：≤90 颗随视口自适应，
+                 缓慢上浮 + 正弦横漂 + lighter 叠加 + 闪烁；reduced-motion 静止单帧、页签隐藏停帧
 [ L1 网格 ]      32px 白线网格 opacity 12%，径向 mask 向首屏以下渐隐（下方保持干净）
 [ L0 光云 ]      850×400 琥珀高斯模糊光云（blur 110px），14s ease-in-out 正弦呼吸
 ```

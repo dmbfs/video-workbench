@@ -34,7 +34,7 @@ function Nav() {
             <Lock className="size-3 text-primary" /> 本地运行 · Key 自理
           </span>
           <Button onClick={() => navigate("/app")}
-            className="group h-9 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            className="group btn-shine h-9 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
             进入工作台
             <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Button>
@@ -101,10 +101,15 @@ function Hero() {
           </BlurFade>
           <BlurFade delay={0.08}>
             <h1 className="font-display text-5xl font-bold leading-[1.08] tracking-tight lg:text-6xl">
-              把一句话，
-              <br />
-              <span className="bg-gradient-to-r from-orange-400 via-orange-500 to-amber-200 bg-clip-text text-transparent">
-                变成一条能发的片
+              <span className="mask-wrap">
+                <span className="mask-line" style={{ animationDelay: "0.12s" }}>把一句话，</span>
+              </span>
+              <span className="mask-wrap">
+                <span className="mask-line" style={{ animationDelay: "0.26s" }}>
+                  <span className="bg-gradient-to-r from-orange-400 via-orange-500 to-amber-200 bg-clip-text text-transparent">
+                    变成一条能发的片
+                  </span>
+                </span>
               </span>
             </h1>
           </BlurFade>

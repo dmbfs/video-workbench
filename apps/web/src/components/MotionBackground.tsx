@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
+import { ParticleField } from "@/components/ParticleField";
 
 /**
  * MotionSites 五层背景栈（DESIGN.md §3.5，v1.1）
@@ -50,6 +51,9 @@ export function MotionBackground() {
         className="absolute left-0 top-[21%] h-px w-[38%]"
         style={{ background: "linear-gradient(90deg, transparent, rgba(253,186,116,.5), transparent)" }}
       />
+
+      {/* Layer 2.5: 流动粒子（canvas 2D sprite 辉光） */}
+      <ParticleField />
 
       {/* Layer 4: 暗角 */}
       <div

@@ -7,6 +7,20 @@ try {
   await page.goto("http://localhost:5173");
   await page.waitForSelector("text=把一句话"); await wait(1200);
 
+  // L2.5 粒子层：canvas 存在、有像素、两帧不同（在动）
+  const moving = await page.evaluate(async () => {
+    const c = document.querySelector("[aria-hidden].pointer-events-none.-z-10 canvas");
+    if (!c) return { ok: false, why: "no canvas" };
+    const g = c.getContext("2d");
+    const sample = () => {
+      const d = g.getImageData(0, 0, c.width, Math.min(400, c.height)).data;
+      let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++; return n;
+    };
+    const a = sample(); await new Promise((r) => setTimeout(r, 350)); const b = sample();
+    return { ok: a > 0 && a !== b, painted: a, frames: [a, b] };
+  });
+  if (!moving.ok) issues.push("粒子层异常: " + JSON.stringify(moving));
+
   // 红线④/布局：无横向溢出
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 0) issues.push(`横向溢出 ${overflow}px`);

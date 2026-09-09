@@ -1,11 +1,20 @@
 import { useEffect, useRef } from "react";
 
 /**
- * 背景粒子流场（Layer 2，DESIGN.md §3.5）
- * 「算力涌动」的克制版风暴：伪噪声流场驱动 + 20s 阵风调制 + 三类粒子（尘埃/流光/彗星）。
- * 线段拖尾（prev→cur，无累积缓冲，不遮光云）。零依赖、非 WebGL；
- * reduced-motion 静止单帧、页签隐藏停帧、DPR≤2、数量随视口自适应（≤140）。
+ * 背景粒子流场（Layer 2，DESIGN.md §3.5 v1.2.1）
+ * 粒子群共享同一个无旋流场（三层正弦势的解析梯度，不可压缩 → 自然成股、不堆积），
+ * 同区域粒子同向流动形成可见的「流」。20s 阵风调制整体节奏。
+ * 三类粒子：尘埃(辉光点)/流光(短拖尾)/彗星(多点渐隐拖尾)。零依赖、非 WebGL；
+ * reduced-motion 静止单帧、页签隐藏停帧、DPR≤2、数量随视口自适应（≤200）。
  */
+
+// 共享流场：三层正弦势 φ=ΣA·sin(kx·x+ky·y+w·t+p)，v=(∂φ/∂y, −∂φ/∂x) 无旋
+const OCT = [
+  { kx: 0.004, ky: 0.009, w: 0.00018, A: 260, p: 0 },
+  { kx: -0.007, ky: 0.005, w: -0.00026, A: 150, p: 2.1 },
+  { kx: 0.012, ky: -0.008, w: 0.00042, A: 70, p: 4.2 },
+];
+
 export function ParticleField() {
   const ref = useRef<HTMLCanvasElement>(null);
 
@@ -17,7 +26,6 @@ export function ParticleField() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // 尘埃用 sprite 辉光点；流光/彗星用线段拖尾
     const makeSprite = (r: number, g: number, b: number) => {
       const s = document.createElement("canvas");
       s.width = s.height = 32;
@@ -31,15 +39,26 @@ export function ParticleField() {
       return s;
     };
     const dustSprite = makeSprite(255, 237, 213);
-    const C_TAIL = [249, 115, 22] as const;   // 彗星尾 orange-500
-    const C_HEAD = [252, 211, 77] as const;   // 彗星头 amber-300
+    const C_TAIL = [249, 115, 22] as const;
+    const C_HEAD = [252, 211, 77] as const;
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+    // 共享流场采样（全粒子同源）
+    const flow = (x: number, y: number, t: number): [number, number] => {
+      let vx = 0, vy = 0;
+      for (const o of OCT) {
+        const c = Math.cos(o.kx * x + o.ky * y + o.w * t + o.p);
+        vx += o.A * o.ky * c;
+        vy -= o.A * o.kx * c;
+      }
+      return [vx, vy];
+    };
+
     type P = {
-      kind: 0 | 1 | 2;            // 0 尘埃 / 1 流光 / 2 彗星
+      kind: 0 | 1 | 2;
       x: number; y: number; px: number; py: number;
-      speed: number; amp: number; f1: number; f2: number; w1: number; w2: number;
-      phase: number; a: number; size: number;
+      base: number; mul: number;
+      a: number; size: number; tw: number; phase: number;
       trail?: { x: number; y: number }[];
     };
     let particles: P[] = [];
@@ -52,21 +71,20 @@ export function ParticleField() {
       canvas.width = Math.max(1, Math.round(w * dpr));
       canvas.height = Math.max(1, Math.round(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.min(140, Math.floor((w * h) / 11000));
+      const n = Math.min(200, Math.floor((w * h) / 7200));
       particles = Array.from({ length: n }, (_, i) => {
         const r = i / n;
-        const kind: 0 | 1 | 2 = r < 0.7 ? 0 : r < 0.95 ? 1 : 2;
+        const kind: 0 | 1 | 2 = r < 0.58 ? 0 : r < 0.9 ? 1 : 2;
         const x = Math.random() * w, y = Math.random() * h;
         return {
           kind,
           x, y, px: x, py: y,
-          speed: kind === 0 ? 0.2 + Math.random() * 0.3 : kind === 1 ? 0.6 + Math.random() * 0.6 : 1.8 + Math.random() * 1.2,
-          amp: kind === 0 ? 10 + Math.random() * 18 : 14 + Math.random() * 26,
-          f1: 0.0016 + Math.random() * 0.0022, f2: 0.0014 + Math.random() * 0.002,
-          w1: 0.00035 + Math.random() * 0.0004, w2: 0.0003 + Math.random() * 0.0005,
-          phase: Math.random() * Math.PI * 2,
-          a: kind === 0 ? 0.1 + Math.random() * 0.12 : kind === 1 ? 0.2 + Math.random() * 0.18 : 0.45 + Math.random() * 0.15,
+          base: kind === 0 ? 0.3 + Math.random() * 0.25 : kind === 1 ? 0.8 + Math.random() * 0.5 : 2.0 + Math.random() * 1.2,
+          mul: kind === 0 ? 0.35 : kind === 1 ? 0.7 : 1.6,
+          a: kind === 0 ? 0.1 + Math.random() * 0.12 : kind === 1 ? 0.22 + Math.random() * 0.18 : 0.45 + Math.random() * 0.15,
           size: kind === 0 ? 1.6 + Math.random() * 1.6 : kind === 1 ? 1.8 + Math.random() * 1.2 : 2.2 + Math.random() * 1.4,
+          tw: 0.0008 + Math.random() * 0.0012,
+          phase: Math.random() * Math.PI * 2,
           trail: kind === 2 ? [] : undefined,
         };
       });
@@ -76,7 +94,7 @@ export function ParticleField() {
       if (!running) return;
       const dt = Math.min(2, last ? (t - last) / 16.7 : 1);
       last = t;
-      const gust = 0.75 + 0.25 * Math.sin(t * (Math.PI * 2 / 20000)); // ~20s 阵风
+      const gust = 0.75 + 0.25 * Math.sin(t * (Math.PI * 2 / 20000));
 
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
@@ -84,31 +102,26 @@ export function ParticleField() {
 
       for (const p of particles) {
         p.px = p.x; p.py = p.y;
-        // 伪噪声流场：水平主流 + 卷曲扰动
-        const curlX = Math.sin(p.y * p.f1 * 1000 + t * p.w1 + p.phase) * p.amp * 0.012;
-        const curlY = Math.cos(p.x * p.f2 * 1000 + t * p.w2 + p.phase) * p.amp * 0.02;
-        p.x += (p.speed * gust + curlX) * dt;
-        p.y += curlY * dt;
+        const [fx, fy] = flow(p.x, p.y, t);
+        p.x += (p.base * gust + fx * p.mul) * dt;
+        p.y += (fy * p.mul) * dt;
 
-        // 环绕重生（重生时清拖尾，防跨屏拉线）
         if (p.x > w + 24) { p.x = -20; p.y = Math.random() * h; p.px = p.x; p.py = p.y; if (p.trail) p.trail = []; }
+        if (p.x < -24) { p.x = w + 20; p.px = p.x; p.py = p.y; if (p.trail) p.trail = []; }
         if (p.y < -24) { p.y = h + 20; p.px = p.x; p.py = p.y; if (p.trail) p.trail = []; }
         if (p.y > h + 24) { p.y = -20; p.px = p.x; p.py = p.y; if (p.trail) p.trail = []; }
 
         if (p.kind === 0) {
-          // 尘埃：辉光点
-          ctx.globalAlpha = p.a * (0.72 + 0.28 * Math.sin(t * 0.001 + p.phase));
+          ctx.globalAlpha = p.a * (0.72 + 0.28 * Math.sin(t * p.tw + p.phase));
           ctx.drawImage(dustSprite, p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
         } else if (p.kind === 1) {
-          // 流光：单段短拖尾
           ctx.globalAlpha = p.a;
           ctx.strokeStyle = "rgba(253,186,116,1)";
           ctx.lineWidth = p.size * 0.55;
           ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(p.x, p.y); ctx.stroke();
         } else {
-          // 彗星：多点渐隐拖尾（尾 orange-500 → 头 amber-300）
           p.trail!.push({ x: p.x, y: p.y });
-          if (p.trail!.length > 7) p.trail!.shift();
+          if (p.trail!.length > 9) p.trail!.shift();
           const tr = p.trail!;
           for (let s = 1; s < tr.length; s++) {
             const k = s / tr.length;
@@ -124,15 +137,18 @@ export function ParticleField() {
       raf = requestAnimationFrame(step);
     };
 
-    const drawStatic = () => { // reduced-motion：一帧静态流线
+    const drawStatic = () => {
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
       for (const p of particles) {
+        const [fx, fy] = flow(p.x, p.y, 0);
+        const m = Math.hypot(fx, fy) || 1;
+        const dx = (fx / m) * p.base * 22, dy = (fy / m) * p.base * 22;
         if (p.kind === 0) { ctx.globalAlpha = p.a; ctx.drawImage(dustSprite, p.x - p.size, p.y - p.size, p.size * 2, p.size * 2); }
         else {
           ctx.globalAlpha = p.a * 0.8; ctx.strokeStyle = p.kind === 1 ? "rgba(253,186,116,1)" : "rgba(252,211,77,1)";
           ctx.lineWidth = p.size * 0.6;
-          ctx.beginPath(); ctx.moveTo(p.x - p.speed * 14, p.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(p.x - dx, p.y - dy); ctx.lineTo(p.x, p.y); ctx.stroke();
         }
       }
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";

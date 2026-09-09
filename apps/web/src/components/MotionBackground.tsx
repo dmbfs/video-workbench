@@ -4,7 +4,7 @@ import { ParticleField } from "@/components/ParticleField";
 /**
  * MotionSites 背景栈 v1.2（DESIGN.md §3.5）—— 四层 + 全局噪点
  * Layer 0 流体光云（14s ease-in-out 正弦呼吸，环境层豁免红线⑦）
- * Layer 1 动能流光 1px（竖 7s / 横 9s linear 循环，环境层豁免）
+ * Layer 1 动能流光 1px×4（竖 7s/11s，横 9s/13s linear 循环，环境层豁免）
  * Layer 2 粒子流场（canvas 2D：伪噪声流场 + 阵风 + 三类粒子线段拖尾）
  * Layer 3 胶片噪点 —— 全局 body::before 已铺 3.5% feTurbulence，此处不重复
  * Layer 4 暗角（四周压向 --bg-base）
@@ -41,6 +41,18 @@ export function MotionBackground() {
         className="absolute left-0 top-[21%] h-px w-[38%]"
         style={{ background: "linear-gradient(90deg, transparent, rgba(253,186,116,.5), transparent)" }}
       />
+        <motion.div
+          animate={reduced ? undefined : { y: ["-120%", "380%"] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "linear", delay: 3 }}
+          className="absolute left-[62%] top-0 h-[30%] w-px"
+          style={{ background: "linear-gradient(180deg, transparent, rgba(249,115,22,.45), transparent)" }}
+        />
+        <motion.div
+          animate={reduced ? undefined : { x: ["-120%", "380%"] }}
+          transition={{ duration: 13, repeat: Infinity, ease: "linear", delay: 5.5 }}
+          className="absolute left-0 top-[56%] h-px w-[30%]"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(253,186,116,.38), transparent)" }}
+        />
 
       {/* Layer 2: 粒子流场（canvas 2D） */}
       <ParticleField />

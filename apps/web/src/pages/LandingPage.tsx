@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Clapperboard, Cpu, KeyRound, Lock, MessagesSquare, RefreshCw, Sparkles, Timer } from "lucide-react";
+import { ArrowRight, Check, CircleDashed, Clapperboard, Cpu, EyeOff, KeyRound, Lock, MessagesSquare, MoveDown, Plus, RefreshCw, Sparkles, Timer } from "lucide-react";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
-import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { DotPattern } from "@/components/ui/dot-pattern";
@@ -139,68 +138,152 @@ function Hero() {
   );
 }
 
-const FEATURES = [
+const CARDS = [
   {
     icon: <MessagesSquare className="size-5 text-primary" />,
     title: "先聊，再烧钱",
     desc: "顾问把你的模糊想法问清楚，分镜确认后才调用生成——不花冤枉额度",
-    className: "md:col-span-2",
+    className: "md:col-span-8",
+    demo: "agent" as const,
+  },
+  {
+    icon: <KeyRound className="size-5 text-primary" />,
+    title: "Key 只存你电脑",
+    desc: "请求全部从本机后端转发，界面上连明文都看不到",
+    className: "md:col-span-4",
+    demo: "privacy" as const,
   },
   {
     icon: <RefreshCw className="size-5 text-primary" />,
     title: "一段翻车不重来",
     desc: "第 2 段不满意？单独重出那一段，别的原样保留",
-    className: "",
-  },
-  {
-    icon: <KeyRound className="size-5 text-primary" />,
-    title: "key 只存你电脑",
-    desc: "请求全部从本机后端转发，界面上连明文都看不到",
-    className: "",
+    className: "md:col-span-6",
+    demo: "retry" as const,
   },
   {
     icon: <Timer className="size-5 text-primary" />,
-    title: "5–60 秒自己定",
+    title: "5–60 秒自定拼接",
     desc: "长片自动拆段接力，段间首尾帧衔接，风格不漂移",
-    className: "md:col-span-2",
+    className: "md:col-span-6",
+    demo: "splice" as const,
   },
 ];
+
+function CardDemo({ kind }: { kind: "agent" | "privacy" | "retry" | "splice" }) {
+  if (kind === "agent") {
+    return (
+      <div className="relative h-full space-y-2" aria-hidden>
+        <DotPattern className="opacity-30" />
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex max-w-full items-center gap-1.5 rounded-lg rounded-bl-sm border border-border bg-[#09090b] px-2.5 py-1.5 text-xs text-muted-foreground">
+            顾问：桥上要有「归途感」，结尾加个无人机拉远？
+          </div>
+          {[
+            { n: "01", t: "跨海大桥 · 车流延时", s: "5s", ok: true },
+            { n: "02", t: "顾客举杯 · 暖光剪影", s: "3s", ok: true },
+            { n: "03", t: "无人机拉远 · 字幕收尾", s: "4s", ok: false },
+          ].map((r) => (
+            <div key={r.n} className="flex items-center gap-2.5 rounded-lg border border-border bg-[#09090b] px-3 py-1.5">
+              <span className="font-mono text-xs text-primary">{r.n}</span>
+              <span className="line-clamp-1 flex-1 text-xs text-foreground/80">{r.t}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{r.s}</span>
+              {r.ok
+                ? <Check className="size-3.5 text-[#4ADE80]" />
+                : <CircleDashed className="size-3.5 text-muted-foreground" />}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (kind === "privacy") {
+    return (
+      <div className="relative h-full space-y-3" aria-hidden>
+        <div className="rounded-lg border border-white/5 bg-[#09090b] px-3 py-2.5 font-mono text-xs">
+          <div className="text-muted-foreground">MINIMAX_API_KEY</div>
+          <div className="mt-1 flex items-center gap-2 text-foreground/85">
+            <EyeOff className="size-3.5 text-primary" />
+            sk-proj-••••••••8F2a
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <span className="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">AES-256</span>
+          <span className="rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-[10px] text-primary">LOCAL ONLY</span>
+        </div>
+      </div>
+    );
+  }
+  if (kind === "retry") {
+    return (
+      <div className="relative flex h-full items-center gap-2" aria-hidden>
+        {[
+          { n: "#01", st: "好了" },
+          { n: "#02", st: "翻车了" },
+          { n: "#03", st: "好了" },
+        ].map((s) => (
+          <div key={s.n} className={`flex-1 rounded-lg border px-3 py-2.5 text-center ${
+            s.st === "翻车了" ? "border-[#F87171]/40 bg-[#F87171]/10" : "border-border bg-[#09090b]"}`}>
+            <div className="font-mono text-xs text-muted-foreground">{s.n}</div>
+            <div className={`mt-1 text-xs ${s.st === "翻车了" ? "text-[#F87171]" : "text-[#4ADE80]"}`}>{s.st}</div>
+          </div>
+        ))}
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-md border border-orange-500/30 bg-[#121215] px-2.5 py-1 font-mono text-[10px] text-primary shadow-lg shadow-black/40">
+          重跑此段 ↻
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="relative flex h-full flex-col justify-center gap-2.5" aria-hidden>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 rounded-lg border border-border bg-[#09090b] px-3 py-2 font-mono text-xs">
+          Clip A <span className="text-muted-foreground">· 12s</span>
+        </div>
+        <Plus className="size-3.5 text-primary" />
+        <div className="flex-1 rounded-lg border border-border bg-[#09090b] px-3 py-2 font-mono text-xs">
+          Clip B <span className="text-muted-foreground">· 18s</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <MoveDown className="size-3.5 text-primary" />
+        <span className="font-mono text-[10px]">ffmpeg 拼接 · 首尾帧接力</span>
+      </div>
+      <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 font-mono text-xs text-primary">
+        final.mp4 · 30.0s
+      </div>
+    </div>
+  );
+}
 
 function FeatureBento() {
   return (
     <section className="relative mx-auto max-w-6xl px-6 py-16">
-      <h2 className="font-display text-3xl font-semibold mb-8">为什么不是又一个「一键生成」</h2>
-      <BentoGrid className="grid md:grid-cols-3 auto-rows-[13rem] gap-4">
-        {FEATURES.map((f, i) => (
-          <BlurFade key={f.title} delay={i * 0.06} className={f.className}>
-            <BentoGridItem
-              title={f.title}
-              description={f.desc}
-              icon={f.icon}
-              className="h-full [&_h3]:font-display [&_p]:text-muted-foreground"
-              header={
-                <div className="relative h-full w-full overflow-hidden rounded-xl border border-border bg-card/60 flex items-center justify-center">
-                  <DotPattern className="opacity-30" />
-                  {i === 0 && (
-                    <div className="relative z-10 w-3/4 space-y-2">
-                      <div className="h-6 w-2/3 rounded-md bg-secondary" />
-                      <div className="h-6 w-full rounded-md bg-primary/20" />
-                      <div className="h-6 w-1/2 rounded-md bg-secondary" />
-                    </div>
-                  )}
-                  {i === 3 && (
-                    <div className="relative z-10 flex items-end gap-1.5 h-16">
-                      {[40, 65, 30, 80, 55, 95, 45].map((h, k) => (
-                        <div key={k} className="w-3 rounded-sm bg-primary/70" style={{ height: `${h}%` }} />
-                      ))}
-                    </div>
+      <h2 className="mb-8 font-display text-3xl font-semibold tracking-tight">为什么不是又一个「一键生成」</h2>
+      <div className="grid gap-4 md:grid-cols-12">
+        {CARDS.map((c, i) => (
+          <BlurFade key={c.title} delay={i * 0.06} className={c.className}>
+            <div className="group relative flex h-full flex-col gap-4 rounded-xl border border-border bg-card p-5 transition-colors duration-200 hover:border-orange-500/30">
+              <div className="relative flex-1 overflow-hidden rounded-lg">
+                <CardDemo kind={c.demo} />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {c.icon}
+                    <h3 className="font-display font-semibold tracking-tight">{c.title}</h3>
+                  </div>
+                  {c.demo === "agent" && (
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      0 Tokens Spent
+                    </span>
                   )}
                 </div>
-              }
-            />
+                <p className="text-sm text-muted-foreground">{c.desc}</p>
+              </div>
+            </div>
           </BlurFade>
         ))}
-      </BentoGrid>
+      </div>
     </section>
   );
 }

@@ -26,7 +26,7 @@
 - 项目管理与历史：本地 SQLite + 视频文件库
 
 **二期（P1，本期不做）**
-- 自主 Agent（自动多轮改写并触发生成）、2–5 分钟长视频、自然语言批量修改全部分镜（借鉴 Google Flow 的 Refine 能力）、云端多用户、模板库、配音/BGM、云端 SaaS 化
+- 自主 Agent（自动多轮改写并触发生成）、2–5 分钟长视频、自然语言批量修改全部分镜（借鉴 Google Flow 的 Refine 能力）、云端多用户、模板库、配音/BGM、云端 SaaS 化；自主 Agent 的 harness 方向稿见 `docs/P1-AGENT-HARNESS.md`
 
 ## 4. 核心流程
 

@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS segments (id TEXT PRIMARY KEY, project_id TEXT NOT NU
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS chat_messages (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, role TEXT NOT NULL,
   content TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS generation_calls (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL,
+  segment_id TEXT NOT NULL, provider TEXT, created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS idx_generation_calls_project ON generation_calls(project_id);
 `);
 
 export const dataRoot = DATA;

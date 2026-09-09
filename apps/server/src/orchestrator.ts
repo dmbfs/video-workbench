@@ -4,13 +4,23 @@ import { db, dataRoot } from "./db.js";
 import { getSettings } from "./settings.js";
 import { getVideoProvider } from "./providers/factory.js";
 import { broadcast } from "./sse.js";
-import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS } from "./config.js";
+import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT } from "./config.js";
 import type { ProviderConfig, Segment, SegmentStatus } from "@vidstitch/shared";
 
 /** 不该重试的失败：重试会重复创建付费任务，或永远等不到结果 */
 class NonRetryableError extends Error {}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 项目已创建的付费视频任务数（含重试） */
+export function projectGenerationCalls(projectId: string): number {
+  return (db.prepare("SELECT COUNT(*) c FROM generation_calls WHERE project_id=?").get(projectId) as { c: number }).c;
+}
+
+function recordGenerationCall(projectId: string, segmentId: string, provider: string) {
+  db.prepare("INSERT INTO generation_calls(project_id,segment_id,provider,created_at) VALUES(?,?,?,?)")
+    .run(projectId, segmentId, provider, new Date().toISOString());
+}
 
 class Orchestrator {
   private queue: string[] = [];
@@ -70,6 +80,13 @@ class Orchestrator {
       settings.providers.find((p) => p.kind === "mock");
     if (!cfg) return this.setStatus(segmentId, { status: "failed", error: "没有可用的视频 provider，请到设置页添加" });
 
+    if (projectGenerationCalls(s.projectId) >= MAX_CALLS_PER_PROJECT) {
+      return this.setStatus(segmentId, {
+        status: "failed",
+        error: `已达项目生成次数上限（${MAX_CALLS_PER_PROJECT} 次）：为避免继续计费已停止，请确认成本后调整上限再重试`,
+      });
+    }
+
     this.setStatus(segmentId, { status: "generating", provider: cfg.id, error: null });
     try {
       const provider = getVideoProvider(cfg);
@@ -77,6 +94,7 @@ class Orchestrator {
         { prompt: s.prompt, duration: s.duration, ratio: sb?.ratio ?? "16:9", withAudio: (sb?.with_audio ?? 1) === 1 },
         { projectId: s.projectId, segmentId, idx: s.idx },
       );
+      recordGenerationCall(s.projectId, segmentId, cfg.id);
       this.setStatus(segmentId, { taskId });
 
       let videoRef: string | undefined;

@@ -4,7 +4,8 @@ import { rmSync } from "node:fs";
 import { db, dataRoot } from "../db.js";
 import { newId } from "../settings.js";
 import { createProjectSchema, addSegmentSchema } from "@vidstitch/shared";
-import { orchestrator } from "../orchestrator.js";
+import { orchestrator, projectGenerationCalls } from "../orchestrator.js";
+import { MAX_CALLS_PER_PROJECT } from "../config.js";
 
 export async function projectRoutes(app: FastifyInstance) {
   app.post("/api/projects", async (req) => {
@@ -43,11 +44,13 @@ export async function projectRoutes(app: FastifyInstance) {
         transitionOut: s.transition_out, status: s.status, provider: s.provider ?? undefined,
         taskId: s.task_id ?? undefined, videoPath: s.video_path ?? undefined, error: s.error ?? undefined,
       })),
+      generation: { calls: projectGenerationCalls(id), maxCalls: MAX_CALLS_PER_PROJECT },
     };
   });
 
   app.delete("/api/projects/:id", async (req) => {
     const { id } = req.params as any;
+    db.prepare("DELETE FROM generation_calls WHERE project_id=?").run(id);
     db.prepare("DELETE FROM segments WHERE project_id=?").run(id);
     db.prepare("DELETE FROM storyboards WHERE project_id=?").run(id);
     db.prepare("DELETE FROM projects WHERE id=?").run(id);
@@ -68,6 +71,6 @@ export async function projectRoutes(app: FastifyInstance) {
     const { id } = req.params as any;
     const rows = db.prepare("SELECT id FROM segments WHERE project_id=? AND status!='succeeded' ORDER BY idx").all(id) as any[];
     rows.forEach((r) => orchestrator.enqueue(r.id));
-    return { enqueued: rows.length };
+    return { enqueued: rows.length, callsUsed: projectGenerationCalls(id), maxCalls: MAX_CALLS_PER_PROJECT };
   });
 }

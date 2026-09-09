@@ -67,6 +67,7 @@ try {
 
   // 4. 生成全部，等待 3 段都出视频
   await page.getByRole("button", { name: /生成全部/ }).click();
+  await page.getByRole("button", { name: /开始出片/ }).click(); // FR-9 成本确认弹窗
   await wait(2500);
   await page.screenshot({ path: "screenshots/m1-03-generating.png" });
   await waitVideos(page, 3, 180000);

@@ -2,10 +2,10 @@ import { motion, useReducedMotion } from "motion/react";
 import { ParticleField } from "@/components/ParticleField";
 
 /**
- * MotionSites 五层背景栈（DESIGN.md §3.5，v1.1）
+ * MotionSites 背景栈 v1.2（DESIGN.md §3.5）—— 四层 + 全局噪点
  * Layer 0 流体光云（14s ease-in-out 正弦呼吸，环境层豁免红线⑦）
- * Layer 1 动能网格 32px（12% 白线，顶部径向 mask——首屏以下保持干净）
- * Layer 2 动能流光 1px（沿网格轴线 7s/9s linear 循环，环境层豁免）
+ * Layer 1 动能流光 1px（竖 7s / 横 9s linear 循环，环境层豁免）
+ * Layer 2 粒子流场（canvas 2D：伪噪声流场 + 阵风 + 三类粒子线段拖尾）
  * Layer 3 胶片噪点 —— 全局 body::before 已铺 3.5% feTurbulence，此处不重复
  * Layer 4 暗角（四周压向 --bg-base）
  * 全层 pointer-events-none、-z-10，尊重 prefers-reduced-motion。
@@ -15,16 +15,6 @@ export function MotionBackground() {
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      {/* Layer 1: 动能网格（先铺，被光云压住交界处） */}
-      <div
-        className="absolute inset-0 opacity-12 [mask-image:radial-gradient(80%_55%_at_50%_0%,white,transparent)]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-
       {/* Layer 0: 流体光云（外层定位居中，内层呼吸） */}
       <div className="absolute -top-[230px] left-1/2 h-[400px] w-[850px] -translate-x-1/2">
         <motion.div
@@ -38,7 +28,7 @@ export function MotionBackground() {
         />
       </div>
 
-      {/* Layer 2: 动能流光 —— 竖向 7s / 横向 9s */}
+      {/* Layer 1: 动能流光 —— 竖向 7s / 横向 9s */}
       <motion.div
         animate={reduced ? undefined : { y: ["-120%", "380%"] }}
         transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
@@ -52,7 +42,7 @@ export function MotionBackground() {
         style={{ background: "linear-gradient(90deg, transparent, rgba(253,186,116,.5), transparent)" }}
       />
 
-      {/* Layer 2.5: 流动粒子（canvas 2D sprite 辉光） */}
+      {/* Layer 2: 粒子流场（canvas 2D） */}
       <ParticleField />
 
       {/* Layer 4: 暗角 */}

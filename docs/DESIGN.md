@@ -56,21 +56,22 @@
 弹簧：`{ type:"spring", stiffness:300, damping:28 }`；替代曲线 `[0.16,1,0.3,1]`（expo-out）；时长 200–400ms；列表进场 stagger 40ms。生成进度用呼吸光效（`glowing-effect`），禁止匀速循环位移。
 **环境层豁免（v1.1）**：仅限背景装饰层（§3.5 光云呼吸 14s ease-in-out、流光 7s/9s linear、`.breathe` alternate）可循环；内容与交互动效一律 spring/expo-out；全部环境动效尊重 `prefers-reduced-motion`。
 
-### 3.5 背景五层栈（MotionSites，v1.1）
+### 3.5 背景栈（MotionSites，v1.2）
 
 落地页由 `components/MotionBackground.tsx` 渲染，全层 `pointer-events-none`、`-z-10`：
 
 ```
 [ L4 暗角 ]      径向渐变四周压向 --bg-base（中心 35% 起，边缘 .92）
 [ L3 噪点 ]      全局 body::before 3.5% SVG feTurbulence —— 组件内不得重复铺噪点
-[ L2 流光 ]      1px 橙色流光沿网格轴线平移（竖 7s / 横 9s，linear）
-[ L2.5 粒子 ]    canvas 2D sprite 辉光微粒（零依赖非 WebGL）：≤90 颗随视口自适应，
-                 缓慢上浮 + 正弦横漂 + lighter 叠加 + 闪烁；reduced-motion 静止单帧、页签隐藏停帧
-[ L1 网格 ]      32px 白线网格 opacity 12%，径向 mask 向首屏以下渐隐（下方保持干净）
+[ L2 粒子流场 ]  canvas 2D（零依赖非 WebGL）：≤140 颗随视口自适应，
+                 伪噪声流场驱动 + 20s 阵风调制 + 三类粒子——
+                 70% 尘埃（辉光点）/ 25% 流光（短拖尾）/ 5% 彗星（多点渐隐拖尾，橙→琥珀）；
+                 线段拖尾无累积缓冲（不遮光云）；reduced-motion 静止单帧、页签隐藏停帧
+[ L1 流光 ]      1px 橙色流光平移（竖 7s / 横 9s，linear）
 [ L0 光云 ]      850×400 琥珀高斯模糊光云（blur 110px），14s ease-in-out 正弦呼吸
 ```
 
-QA：网格/流光若在 100% 下显脏即降档或收 mask；工作台/设置页不接入光云层，维持极简。
+QA：粒子亮斑（lum>35）60–80 个为限、最亮 ≤200/255，超限即降透明度或减量；流光/光云若 100% 下显脏即降档。工作台/设置页不接入光云与粒子层，维持极简。
 
 ## 4. 布局结构（工作台）
 

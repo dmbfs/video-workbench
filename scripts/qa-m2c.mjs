@@ -25,15 +25,16 @@ try {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   if (overflow > 0) issues.push(`横向溢出 ${overflow}px`);
 
-  // 背景五层栈存在性
+  // 背景栈存在性（v1.2：网格已删，需确认不存在；canvas 粒子由下方两帧检查覆盖）
   const bg = await page.evaluate(() => {
     const el = document.querySelector("[aria-hidden].pointer-events-none.-z-10");
     return el ? { children: el.children.length,
-      grid: !!el.querySelector('[style*="32px"]'),
+      gridAbsent: !el.querySelector('[style*="32px"]'),
+      canvas: !!el.querySelector("canvas"),
       cloud: !!el.querySelector('[class*="blur-[110px]"]'),
       vignette: getComputedStyle(el.lastElementChild).backgroundImage.includes("radial-gradient") } : null;
   });
-  if (!bg?.grid || !bg?.cloud || !bg?.vignette) issues.push("背景栈缺层: " + JSON.stringify(bg));
+  if (!bg?.gridAbsent || !bg?.canvas || !bg?.cloud || !bg?.vignette) issues.push("背景栈异常: " + JSON.stringify(bg));
 
   // 红线⑦：交互动效曲线（Button/移位 transition 应为 duration 类，ambient 在 bg 层——DOM 抽查 ease-out）
   // 红线①：无紫/靛

@@ -4,7 +4,13 @@ import { db, dataRoot } from "./db.js";
 import { getSettings } from "./settings.js";
 import { getVideoProvider } from "./providers/factory.js";
 import { broadcast } from "./sse.js";
+import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS } from "./config.js";
 import type { ProviderConfig, Segment, SegmentStatus } from "@vidstitch/shared";
+
+/** 不该重试的失败：重试会重复创建付费任务，或永远等不到结果 */
+class NonRetryableError extends Error {}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 class Orchestrator {
   private queue: string[] = [];
@@ -75,11 +81,17 @@ class Orchestrator {
 
       let videoRef: string | undefined;
       let downloadHeaders: Record<string, string> | undefined;
+      const deadline = Date.now() + POLL_TIMEOUT_MS;
       for (;;) {
-        await new Promise((r) => setTimeout(r, 1500));
+        await sleep(POLL_INTERVAL_MS);
         const poll = await provider.pollTask(taskId);
         if (poll.status === "succeeded") { videoRef = poll.videoRef; downloadHeaders = poll.downloadHeaders; break; }
         if (poll.status === "failed") throw new Error(poll.error ?? "provider failed");
+        if (Date.now() >= deadline) {
+          throw new NonRetryableError(
+            `生成超时：${Math.round(POLL_TIMEOUT_MS / 1000)}s 内未返回结果（task ${taskId}）。已停止等待，避免重复创建付费任务`,
+          );
+        }
       }
 
       const destDir = path.join(dataRoot, "projects", s.projectId, "segments");
@@ -88,9 +100,10 @@ class Orchestrator {
       await resolveVideoRef(videoRef!, dest, downloadHeaders);
       this.setStatus(segmentId, { status: "succeeded", videoPath: dest, error: null });
     } catch (e) {
-      const msg = (e as Error).message.slice(0, 300);
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, 2000 * attempt));
+      const err = e as Error;
+      const msg = err.message.slice(0, 300);
+      if (!(err instanceof NonRetryableError) && attempt < 3) {
+        await sleep(2000 * attempt);
         return this.run(segmentId, attempt + 1);
       }
       this.setStatus(segmentId, { status: "failed", error: msg });

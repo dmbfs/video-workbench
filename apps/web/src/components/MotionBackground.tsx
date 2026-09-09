@@ -24,16 +24,18 @@ export function MotionBackground() {
         }}
       />
 
-      {/* Layer 0: 流体光云 */}
-      <motion.div
-        animate={reduced ? undefined : { opacity: [0.55, 0.85, 0.55], scale: [1, 1.06, 1], x: ["-50%", "calc(-50% + 28px)", "-50%"], y: [0, -14, 0] }}
-        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -top-[230px] left-1/2 h-[400px] w-[850px] -translate-x-1/2 rounded-full blur-[110px]"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(249,115,22,.30), rgba(253,186,116,.13) 55%, transparent)",
-        }}
-      />
+      {/* Layer 0: 流体光云（外层定位居中，内层呼吸） */}
+      <div className="absolute -top-[230px] left-1/2 h-[400px] w-[850px] -translate-x-1/2">
+        <motion.div
+          animate={reduced ? undefined : { opacity: [0.55, 0.85, 0.55], scale: [1, 1.06, 1], x: [0, 28, 0], y: [0, -14, 0] }}
+          transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+          className="h-full w-full rounded-full blur-[110px]"
+          style={{
+            background:
+              "radial-gradient(closest-side, rgba(249,115,22,.30), rgba(253,186,116,.13) 55%, transparent)",
+          }}
+        />
+      </div>
 
       {/* Layer 2: 动能流光 —— 竖向 7s / 横向 9s */}
       <motion.div

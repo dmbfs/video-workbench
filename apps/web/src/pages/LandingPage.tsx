@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Clapperboard, KeyRound, MessagesSquare, RefreshCw, Settings, Timer } from "lucide-react";
-import { Spotlight } from "@/components/ui/spotlight-new";
+import { ArrowRight, Clapperboard, Cpu, KeyRound, Lock, MessagesSquare, RefreshCw, Sparkles, Timer } from "lucide-react";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
@@ -23,87 +22,117 @@ const PLACEHOLDERS = [
 function Nav() {
   const navigate = useNavigate();
   return (
-    <nav className="sticky top-0 z-40 border-b border-border bg-[#0b0b0d]/70 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clapperboard className="size-5 text-primary" />
-          <span className="font-display font-semibold text-lg">vidstitch</span>
+    <nav className="fixed inset-x-0 top-0 z-40 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 via-orange-500 to-amber-200 font-display text-sm font-bold text-[#09090b]">
+            V
+          </span>
+          <span className="font-display text-lg font-semibold tracking-tight">vidstitch</span>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/settings")}>
-            <Settings className="size-4" />设置
+          <span className="hidden items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 font-mono text-xs text-muted-foreground sm:inline-flex">
+            <Lock className="size-3 text-primary" /> 本地运行 · Key 自理
+          </span>
+          <Button onClick={() => navigate("/app")}
+            className="group h-9 bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            进入工作台
+            <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Button>
-          <ShimmerButton onClick={() => navigate("/app")}
-            className="h-9 px-4 text-sm font-medium"
-            shimmerColor="#FDBA74" background="#151517">
-            进工作台
-          </ShimmerButton>
         </div>
       </div>
     </nav>
   );
 }
 
+function HeroMockup() {
+  const navigate = useNavigate();
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-card/80 shadow-2xl shadow-black/40 backdrop-blur-sm">
+      <BorderBeam size={120} duration={8} colorFrom="#F97316" colorTo="#FDBA74" />
+      {/* MacOS 顶栏 */}
+      <div className="flex items-center gap-1.5 border-b border-border px-4 py-3">
+        <span className="size-2.5 rounded-full bg-[#ff5f57]/70" />
+        <span className="size-2.5 rounded-full bg-[#febc2e]/70" />
+        <span className="size-2.5 rounded-full bg-[#28c840]/70" />
+        <span className="ml-2 font-mono text-xs text-muted-foreground">vidstitch — 工作台</span>
+      </div>
+      <div className="space-y-4 p-5">
+        <p className="font-mono text-xs text-muted-foreground">流程 B · 有现成文案直接粘</p>
+        <PlaceholdersAndVanishInput
+          placeholders={PLACEHOLDERS}
+          onChange={() => {}}
+          onSubmit={() => navigate("/app")}
+        />
+        {/* 拆解出的分镜条目 */}
+        <div className="space-y-2" aria-hidden>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-[#09090b] px-3 py-2">
+            <span className="font-mono text-xs text-muted-foreground">Shot #01</span>
+            <span className="line-clamp-1 text-xs text-muted-foreground">夕阳下的跨海大桥，车流延时</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px]">5s</span>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+            <span className="font-mono text-xs text-primary">Shot #02</span>
+            <span className="line-clamp-1 text-xs text-foreground/80">霓虹夜航，赛博朋克城市</span>
+            <span className="rounded-full bg-primary/20 px-2 py-0.5 font-mono text-[10px] text-primary">3s</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-border pt-3 font-mono text-xs text-muted-foreground">
+          <span>确认分镜才开始生成</span>
+          <span className="flex items-center gap-1">
+            ≈<NumberTicker value={38} className="text-primary" />s 起出片
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Hero() {
   const navigate = useNavigate();
   return (
-    <section className="relative overflow-hidden">
-      <Spotlight
-        gradientFirst="radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(24,100%,85%,.08) 0, hsla(24,100%,55%,.02) 50%, hsla(24,100%,45%,0) 80%)"
-        gradientSecond="radial-gradient(50% 50% at 50% 50%, hsla(24,100%,85%,.06) 0, hsla(24,100%,55%,.02) 80%, transparent 100%)"
-        gradientThird="radial-gradient(50% 50% at 50% 50%, hsla(24,100%,85%,.04) 0, hsla(24,100%,45%,.02) 80%, transparent 100%)"
-      />
-      <DotPattern className="opacity-40 [mask-image:radial-gradient(50%_50%_at_50%_40%,white,transparent)]" />
-      <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-24 grid md:grid-cols-[1.15fr_1fr] gap-12 items-center">
+    <section className="relative overflow-hidden pt-36 pb-24">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 md:grid-cols-[7fr_5fr]">
         <div className="space-y-6">
           <BlurFade delay={0}>
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-              本地运行 · key 自己填 · 数据不出去
+              <Sparkles className="size-3.5 text-primary" />
+              告别抽盲盒，先看分镜再烧钱
             </span>
           </BlurFade>
           <BlurFade delay={0.08}>
-            <h1 className="font-display text-5xl md:text-6xl font-bold leading-[1.08]">
+            <h1 className="font-display text-5xl font-bold leading-[1.08] tracking-tight lg:text-6xl">
               把一句话，
               <br />
-              变成一条<span className="text-primary">能发的片</span>
+              <span className="bg-gradient-to-r from-orange-400 via-orange-500 to-amber-200 bg-clip-text text-transparent">
+                变成一条能发的片
+              </span>
             </h1>
           </BlurFade>
           <BlurFade delay={0.16}>
             <p className="text-lg text-muted-foreground">
               跟分镜顾问聊两句，产出
-              <WordRotate className="inline-block text-foreground font-medium mx-1"
+              <WordRotate className="mx-1 inline-block font-medium text-foreground"
                 words={["30 秒产品宣传片", "竖屏剧情短视频", "口播开箱视频", "城市夜景航拍"]} />
               ——确认了分镜才开始生成。
             </p>
           </BlurFade>
           <BlurFade delay={0.24}>
-            <div className="flex items-center gap-3 pt-2">
+            <div className="space-y-3 pt-2">
               <ShimmerButton onClick={() => navigate("/app")}
-                className="h-11 px-6 text-sm font-medium"
+                className="group h-11 px-6 text-sm font-medium"
                 shimmerColor="#FDBA74" background="#F97316">
-                进工作台，先聊两句
+                进入工作台
+                <ArrowRight className="ml-1 size-4 transition-transform duration-200 group-hover:translate-x-1" />
               </ShimmerButton>
-              <span className="text-sm text-muted-foreground">不注册、不上传，成片就在你硬盘里</span>
+              <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                <Cpu className="size-3.5 text-primary" /> 不注册 · 成片在本地
+              </span>
             </div>
           </BlurFade>
         </div>
-
         <BlurFade delay={0.2}>
-          <div className="relative rounded-2xl border border-border bg-card/70 backdrop-blur-sm p-5 space-y-4">
-            <BorderBeam size={120} duration={8} colorFrom="#F97316" colorTo="#FDBA74" />
-            <p className="text-xs font-mono text-muted-foreground">流程 B · 有现成文案直接粘</p>
-            <PlaceholdersAndVanishInput
-              placeholders={PLACEHOLDERS}
-              onChange={() => {}}
-              onSubmit={() => navigate("/app")}
-            />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>回车直接进工作台</span>
-              <span className="flex items-center gap-1 font-mono">
-                <NumberTicker value={30} className="text-primary" />s 起
-              </span>
-            </div>
-          </div>
+          <HeroMockup />
         </BlurFade>
       </div>
     </section>

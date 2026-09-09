@@ -1,6 +1,7 @@
-# DESIGN.md — vidstitch 视觉与交互规范 v1.0
+# DESIGN.md — vidstitch 视觉与交互规范 v1.1
 
 > 前端一切 UI 从本文件派生。参考来源：即梦/海螺/Pika 实抓截图（`.firecrawl/shot-*.png`）+ Aceternity UI 官方文档（llms.txt / api/components）。
+> **v1.1 变更（2026-09-09，落地页 MotionSites 重设计）**：底色/面板/边框令牌调深调亮；新增 §3.5 背景五层栈与算盘成本弹窗；环境层动效豁免条款。落地页实施记录见 `docs/superpowers/plans/2026-09-09-m2c-landing-redesign.md`。
 
 ## 1. 参考分析（学什么，丢什么）
 
@@ -27,15 +28,16 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--bg-base` | `#0B0B0D` | 页面底（叠噪点+顶部橙色微光斑） |
-| `--bg-panel` | `#151517` | 面板/卡片 |
+| `--bg-base` | `#09090B` | 页面底（叠五层背景栈，见 §3.5） |
+| `--bg-panel` | `#121215` | 面板/卡片 |
 | `--bg-elevated` | `#1E1E22` | 悬浮层/弹窗 |
-| `--border` | `rgba(255,255,255,.08)` | 分隔线 |
+| `--border` | `rgba(255,255,255,.10)` | 分隔线 |
 | `--text-primary` | `#F4F4F5` (zinc-100) | 主文字 |
 | `--text-secondary` | `#A1A1AA` (zinc-400) | 次文字 |
 | `--accent` | `#F97316` (orange-500) | 主按钮/激活态/进度 |
 | `--accent-soft` | `#FDBA74` (orange-300) | hover/高亮文字 |
 | `--accent-glow` | `rgba(249,115,22,.18)` | 光斑/发光边框 |
+| `--primary-gradient` | `from-orange-400 via-orange-500 to-amber-200` | 核心 H1 高亮、主 CTA（深色文字 `#09090B` 保证对比度） |
 | `--success` | `#4ADE80` | 生成完成 |
 | `--danger` | `#F87171` | 失败/删除 |
 
@@ -52,6 +54,21 @@
 ### 动效（framer-motion）
 
 弹簧：`{ type:"spring", stiffness:300, damping:28 }`；替代曲线 `[0.16,1,0.3,1]`（expo-out）；时长 200–400ms；列表进场 stagger 40ms。生成进度用呼吸光效（`glowing-effect`），禁止匀速循环位移。
+**环境层豁免（v1.1）**：仅限背景装饰层（§3.5 光云呼吸 14s ease-in-out、流光 7s/9s linear、`.breathe` alternate）可循环；内容与交互动效一律 spring/expo-out；全部环境动效尊重 `prefers-reduced-motion`。
+
+### 3.5 背景五层栈（MotionSites，v1.1）
+
+落地页由 `components/MotionBackground.tsx` 渲染，全层 `pointer-events-none`、`-z-10`：
+
+```
+[ L4 暗角 ]      径向渐变四周压向 --bg-base（中心 35% 起，边缘 .92）
+[ L3 噪点 ]      全局 body::before 3.5% SVG feTurbulence —— 组件内不得重复铺噪点
+[ L2 流光 ]      1px 橙色流光沿网格轴线平移（竖 7s / 横 9s，linear）
+[ L1 网格 ]      32px 白线网格 opacity 12%，径向 mask 向首屏以下渐隐（下方保持干净）
+[ L0 光云 ]      850×400 琥珀高斯模糊光云（blur 110px），14s ease-in-out 正弦呼吸
+```
+
+QA：网格/流光若在 100% 下显脏即降档或收 mask；工作台/设置页不接入光云层，维持极简。
 
 ## 4. 布局结构（工作台）
 
@@ -78,7 +95,8 @@
 | `stateful-button` | 生成/导出按钮 | loading→success 状态机对齐后端任务状态 |
 | `multi-step-loader` | 分段生成总进度 | 步数=分段数 |
 | `file-upload` | 参考图/首帧图上传 | 拖拽网格背景保留 |
-| `animated-modal` | 成本确认弹窗 | §6 文案 |
+| `animated-modal` | 轻量确认弹窗 | §6 文案 |
+| 成本确认算盘弹窗（v1.1，定制） | 生成前预算确认（PRD FR-9） | 三栏算盘 N×1=N font-mono；禁用态「先加分镜」；余额钱包不在范围 |
 | `glowing-effect` | 处理中段卡片 | 呼吸频率 2s |
 | `card-spotlight` | 项目卡片 | 鼠标跟随径向光 |
 | `tabs` | 创作/项目/设置 | 背景滑动动画 |

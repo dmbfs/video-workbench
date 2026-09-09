@@ -40,7 +40,7 @@
 
 | 编号 | 功能 | 说明 | 优先级 |
 |---|---|---|---|
-| FR-1 | 模型管理 | 设置页增删 provider：`openai-compatible`（chat）、`minimax`、`seedance`、`mock`；测试连通性；指定默认 chat / video provider | P0 |
+| FR-1 | 模型管理 | 设置页增删 provider：`openai-compatible`（chat）、`minimax`、`seedance`、`tokendance-seedance`、`mock`；测试连通性；指定默认 chat / video provider | P0 |
 | FR-2 | Agent 对话 | SSE 流式回复；系统提示词=分镜顾问；以 JSON 模式产出分镜脚本；zod 校验，失败自动重问 | P0 |
 | FR-3 | 分镜编辑 | 时间线卡片：prompt 可编辑、时长（5/10s）、段序调整、增删、转场标记 | P0 |
 | FR-4 | 生成编排 | 单段生成 / 全部生成；内存队列并发默认 2（可配）；失败指数退避重试 ≤2 次；状态机 pending→generating→succeeded/failed | P0 |
@@ -144,6 +144,7 @@ GET      /files/*                            成品/分段视频静态服务
 | `doubao-seedance-2-0-*`（火山引擎国内） | 4–15s | 同 2.0；注意无 `-pro` SKU，ID 随 host 前缀变化 |
 | `mock`（本地 ffmpeg 合成） | 任意 | 无 key 全链路演示与验收 |
 | `openai-video`（任意 /v1/videos 兼容网关） | 4–30s | 首帧接力走 image 字段、audio 开关、鉴权下载 |
+| `tokendance-seedance`（TokenDance 网关 `seedance-2.5`） | 4–30s | 原生协议 `POST /gateway/ark/v3/generations/tasks`；首帧接力 `role:first_frame`（画幅自动 adaptive）、`generate_audio`；已真机出片 |
 
 ## 8. 技术栈（我的推荐，待联网验证后定稿）
 
@@ -159,7 +160,7 @@ pnpm monorepo · 全 TypeScript：`apps/web` React18+Vite+Tailwind+shadcn/ui+Zus
 | M1 | monorepo 脚手架 + 设置页 + Mock 全链路 | ✅ 完成（commit bf15cdc）：E2E PASS · final.mp4=30.0s · 截图 screenshots/m1-0*.png |
 | M2b | 首页 + 动效 + Aceternity/Magic UI | ✅ 完成：E2E-M2b PASS（landing→app 全链路 30.0s），截图 screenshots/m2b-0*.png；视觉复核待用户（图像桥故障） |
 | M2 | Agent 窗口接真实 OpenAI 兼容 chat | ✅ 完成：mock E2E PASS(final=30.0s) + 真实模型冒烟 PASS（glm-5.3-flash，4 段合法分镜 50.9s）；截图 screenshots/m2-0*.png |
-| M3 | 真实视频 provider + 编排 + SSE 进度 + 单段重生成 | 有 key 即插即用；无 key 保持 mock |
+| M3 | 真实视频 provider + 编排 + SSE 进度 + 单段重生成 | ✅ 完成：M3a openai-video 契约（网关不兼容）+ M3b TokenDance Seedance 原生协议；应用内真机出片 4.06s h264+aac，mock E2E PASS |
 | M4 | 导出转场/历史完善 | 成品 mp4 正常播放，项目管理闭环 |
 | M5 | 整体验收 | 全流程走查 + 截图交付 |
 

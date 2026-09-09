@@ -33,6 +33,22 @@ export async function settingsRoutes(app: FastifyInstance) {
         return { ok: false, error: (e as Error).message.slice(0, 200) };
       }
     }
+    if (p.kind === "tokendance-seedance") {
+      // 验 key（余额接口） + 模型是否在实时目录里，不真的建任务（不花钱）
+      try {
+        const origin = new URL(p.baseUrl ?? "https://tokendance.space/gateway/ark").origin;
+        const [bal, cat] = await Promise.all([
+          fetch(`${origin}/portal/api/v1/user/balance`, { headers: { Authorization: `Bearer ${p.apiKey}` } }),
+          fetch(`${origin}/gateway/v1/models`),
+        ]);
+        if (!bal.ok) return { ok: false, status: bal.status };
+        const models = (await cat.json()) as { data?: { id?: string }[] };
+        const found = (models.data ?? []).some((m) => m.id === p.modelId);
+        return found ? { ok: true, status: bal.status } : { ok: false, error: `模型 ${p.modelId} 不在实时目录中` };
+      } catch (e) {
+        return { ok: false, error: (e as Error).message.slice(0, 200) };
+      }
+    }
     return { ok: true, kind: p.kind }; // mock 直接通过；minimax/seedance 真实验证在 M3
   });
 }

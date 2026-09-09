@@ -57,8 +57,9 @@
 
 `.firecrawl/minimax-video.md`（API 契约全文）· `ark-models.md`（模型目录）· `seedance-json-prompt.md`（字段表）· `h3-prompt.md`（官方示例库）· `mpt.md` · `awesome-skills.md` · `minimax-cli.md`
 
-## 7. 网关视频探测与 OpenAI 兼容视频契约（M3a 依据）
+## 7. 网关视频探测与契约结论（M3a 探测 → M3b 更正）
 
-- 用户网关（tokendance，/v1 前缀）：Sora 风格 /v1/videos 不存在；自有 /v1/video/generations 路由存在且校验模型名；**全部 10 个视频模型（seedance-2.5/2.0 系列、kling-3.0 系列、wan3.0、minimax-h3、happyhorse）一致 503 no_endpoints_available——上游未接，网关侧问题**。
-- 事实标准确认：LLMGateway 文档定义 OpenAI 兼容异步视频契约 POST /v1/videos（model/prompt/seconds/size/audio/image/last_frame/reference_*）→ GET /v1/videos/{id} → /content 下载；据此实现 openai-video provider。证据：.firecrawl/llmgw-video.md。
-- 连通验证：openai-video provider 对用户网关 GET /models → 200（key 有效）；真实生成冒烟待网关上游恢复后零改动可用。
+- 用户网关（tokendance，/v1 前缀）：Sora 风格 /v1/videos 不存在；/v1/video/generations 存在但返回 **503 no_endpoints_available**。M3a 曾据此判定「上游未接、网关侧问题」，**M3b 更正为契约选错**：该路由不在 TokenDance 协议目录内，实时目录里 20 个视频模型只声明原生协议（`seedance:generations` / `minimax:video_generation_v2` / `kling:*` / `wan3:video-synthesis` / `happyhorse:video-synthesis`），没有 `openai:video-*`。
+- 事实标准确认：LLMGateway 文档定义 OpenAI 兼容异步视频契约 POST /v1/videos（model/prompt/seconds/size/audio/image/last_frame/reference_*）→ GET /v1/videos/{id} → /content 下载；据此实现 openai-video provider（对兼容该契约的网关仍有效）。证据：.firecrawl/llmgw-video.md。
+- **M3b 实测（2026-09-09）**：`POST https://tokendance.space/gateway/ark/v3/generations/tasks` + `model=seedance-2.5` → 200 `cgt-20260909160300-74wff`，轮询 `succeeded`，下载得 1280x720 / 5.04s / h264 真实 mp4；应用内 provider 全链路（建项目→4s 段→生成→落地）同样 PASS，产物 h264+aac 4.06s。余额 `/portal/api/v1/user/balance` = 169.76 元，充足；此前 402 `insufficient_quota` 仅因探测误用 `duration=999` 触发预扣估算。
+- 结论：视频出片的正确姿势是 TokenDance 原生协议（本轮接入 Seedance；MiniMax/Kling/Wan/HappyHorse 各自独立路径，按需再开任务）。

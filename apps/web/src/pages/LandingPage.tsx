@@ -10,6 +10,7 @@ import { BlurFade } from "@/components/ui/blur-fade";
 import { WordRotate } from "@/components/ui/word-rotate";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { Button } from "@/components/ui/button";
+import { MotionBackground } from "@/components/MotionBackground";
 
 const PLACEHOLDERS = [
   "夕阳下的跨海大桥，车流延时",
@@ -226,7 +227,8 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen">
+      <MotionBackground />
       <Nav />
       <Hero />
       <FeatureBento />

@@ -28,5 +28,6 @@ await app.register(exportRoutes);
 await app.register(chatRoutes);
 await app.register(storyboardRoutes);
 
-await app.listen({ port: 8787, host: "127.0.0.1" });
-console.log("vidstitch server on :8787");
+const port = Number(process.env.PORT ?? 8787);
+await app.listen({ port, host: "127.0.0.1" });
+console.log(`vidstitch server on :${port}`);

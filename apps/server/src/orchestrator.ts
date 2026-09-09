@@ -77,7 +77,13 @@ class Orchestrator {
   private async run(segmentId: string, attempt = 1): Promise<void> {
     const s = this.seg(segmentId);
     if (!s) return;
-    if (this.tripped.has(s.projectId)) return;
+    if (this.tripped.has(s.projectId)) {
+      // 熔断后仍在重试中的段也要落终态，避免永远停在 generating
+      if (s.status !== "failed") {
+        this.setStatus(segmentId, { status: "failed", error: "已熔断：项目连续生成失败，已停止后续尝试" });
+      }
+      return;
+    }
     const sb = db.prepare("SELECT ratio, with_audio FROM storyboards WHERE project_id=?").get(s.projectId) as
       | { ratio: "16:9" | "9:16"; with_audio: number }
       | undefined;

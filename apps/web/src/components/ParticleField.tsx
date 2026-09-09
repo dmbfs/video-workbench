@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
  * 粒子群共享同一个无旋流场（三层正弦势的解析梯度，不可压缩 → 自然成股、不堆积），
  * 同区域粒子同向流动形成可见的「流」。20s 阵风调制整体节奏。
  * 三类粒子：尘埃(辉光点)/流光(短拖尾)/彗星(多点渐隐拖尾)。零依赖、非 WebGL；
- * reduced-motion 静止单帧、页签隐藏停帧、DPR≤2、数量随视口自适应（≤200）。
+ * reduced-motion 静止单帧、页签隐藏停帧、DPR≤2、数量随视口自适应（≤420，1440×900 ≈ 380）。
  */
 
 // 共享流场：三层正弦势 φ=ΣA·sin(kx·x+ky·y+w·t+p)，v=(∂φ/∂y, −∂φ/∂x) 无旋
@@ -71,17 +71,17 @@ export function ParticleField() {
       canvas.width = Math.max(1, Math.round(w * dpr));
       canvas.height = Math.max(1, Math.round(h * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.min(200, Math.floor((w * h) / 7200));
+      const n = Math.min(420, Math.floor((w * h) / 3400));
       particles = Array.from({ length: n }, (_, i) => {
         const r = i / n;
-        const kind: 0 | 1 | 2 = r < 0.58 ? 0 : r < 0.9 ? 1 : 2;
+        const kind: 0 | 1 | 2 = r < 0.48 ? 0 : r < 0.88 ? 1 : 2;
         const x = Math.random() * w, y = Math.random() * h;
         return {
           kind,
           x, y, px: x, py: y,
           base: kind === 0 ? 0.3 + Math.random() * 0.25 : kind === 1 ? 0.8 + Math.random() * 0.5 : 2.0 + Math.random() * 1.2,
           mul: kind === 0 ? 0.35 : kind === 1 ? 0.7 : 1.6,
-          a: kind === 0 ? 0.1 + Math.random() * 0.12 : kind === 1 ? 0.22 + Math.random() * 0.18 : 0.45 + Math.random() * 0.15,
+          a: kind === 0 ? 0.08 + Math.random() * 0.1 : kind === 1 ? 0.18 + Math.random() * 0.14 : 0.4 + Math.random() * 0.15,
           size: kind === 0 ? 1.6 + Math.random() * 1.6 : kind === 1 ? 1.8 + Math.random() * 1.2 : 2.2 + Math.random() * 1.4,
           tw: 0.0008 + Math.random() * 0.0012,
           phase: Math.random() * Math.PI * 2,

@@ -90,8 +90,8 @@ class Orchestrator {
       }
       return;
     }
-    const sb = db.prepare("SELECT ratio, with_audio FROM storyboards WHERE project_id=?").get(s.projectId) as
-      | { ratio: "16:9" | "9:16"; with_audio: number }
+    const sb = db.prepare("SELECT ratio, with_audio, style_prefix FROM storyboards WHERE project_id=?").get(s.projectId) as
+      | { ratio: "16:9" | "9:16"; with_audio: number; style_prefix: string }
       | undefined;
 
     const settings = getSettings();
@@ -124,8 +124,12 @@ class Orchestrator {
       // 首尾帧接力（PRD §4）：取前一段（idx-1）成片末帧作为本段图生视频首帧参考
       const firstFrameB64 = await this.predecessorLastFrame(s);
 
+      // 风格前缀拼接（PRD §7.3）：段内不重复风格词，统一由 stylePrefix 承载，调用时拼进 prompt
+      const stylePrefix = (sb?.style_prefix ?? "").trim();
+      const prompt = stylePrefix ? `${stylePrefix}, ${s.prompt}` : s.prompt;
+
       const { taskId } = await provider.createTask(
-        { prompt: s.prompt, duration: s.duration, ratio: sb?.ratio ?? "16:9", withAudio: (sb?.with_audio ?? 1) === 1, firstFrameB64 },
+        { prompt, duration: s.duration, ratio: sb?.ratio ?? "16:9", withAudio: (sb?.with_audio ?? 1) === 1, firstFrameB64 },
         { projectId: s.projectId, segmentId, idx: s.idx },
       );
       recordGenerationCall(s.projectId, segmentId, cfg.id);

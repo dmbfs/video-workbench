@@ -61,7 +61,7 @@ export async function authRoutes(app: FastifyInstance) {
     const row = db.prepare("SELECT * FROM users WHERE account = ?").get(norm.account) as any;
     if (!row || !verifyPassword(body.password, row.password_hash)) {
       recordLoginFailure(throttleKey);
-      return reply.code(401).send({ error: "账号或密码不对" });
+      return reply.code(401).send({ error: "账号或密码不对。忘记密码可在项目根目录运行：npm run reset-password <账号> <新密码>" });
     }
     clearLoginFailures(throttleKey);
     const session = createSession(row.id);

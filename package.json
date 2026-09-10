@@ -9,7 +9,8 @@
     "e2e-m2": "node scripts/e2e-m2.mjs",
     "e2e-m2b": "node scripts/e2e-m2b.mjs",
     "e2e-m2c": "node scripts/e2e-m2c.mjs",
-    "e2e-auto": "node scripts/e2e-auto.mjs"
+    "e2e-auto": "node scripts/e2e-auto.mjs",
+    "reset-password": "node scripts/reset-password.mjs"
   },
   "keywords": [],
   "author": "",

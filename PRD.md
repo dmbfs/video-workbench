@@ -137,6 +137,8 @@ GET      /files/*                            成品/分段视频静态服务
 
 **清晰度档位**：生成侧按 provider `capabilities().maxResolution` 收紧请求期望档（`VIDSTITCH_RESOLUTION` 环境变量可降回 720p 省成本，默认 1080p）——Seedance（含 TokenDance 网关）传 `1080p`，MiniMax H3（768P/2K，无 1080p 档）与 OpenAI video size 契约（无 16:9 1080p）保持默认；导出目标分辨率自适应段源：任一段高边 ≥1600px 视为 1080p 类（1920x1080 / 1080x1920），否则维持 720p 类（1280x720 / 720x1280），全 720p 项目不做无谓上采样。统一编码 `libx264 -preset medium -crf 18`（原 veryfast 速度优先口径升级为质感优先）。
 
+**质感后处理预设**（导出请求 `postfx`，默认 `none`；配方与扩展步骤见 `skills/video-postfx/SKILL.md`）：`film`＝eq 压对比降饱和 + 动态颗粒 + 晕影（胶片感）；`clean`＝eq 微提对比饱和 + 轻锐化（社媒直出）。滤镜在每段归一化时应用（几何归一化之后、`format=yuv420p` 之前），保证拼接后全片一致。
+
 **分段数自适应**：编排器按模型 `maxSegmentDuration` 决定拆段——Seedance 2.5 上限 30s（30s 视频单段直出），MiniMax H3 上限 15s（30s=2 段接力）。用户手动分段仍可覆盖自动策略。
 
 ### 7.7 已核实模型目录（默认值，详见 docs/RESEARCH.md）

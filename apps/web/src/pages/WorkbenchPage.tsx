@@ -25,6 +25,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
+  const [postfx, setPostfx] = useState<"none" | "film" | "clean">("none");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [proposal, setProposal] = useState<StoryboardProposal | null>(null);
@@ -107,7 +108,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const totalDur = segments.reduce((a, s) => a + s.duration, 0);
   const doExport = async () => {
     setConfirmOpen(false); setExporting(true);
-    try { const r = (await api.export(ref.current)) as { url: string }; setExportUrl(r.url); }
+    try { const r = (await api.export(ref.current, 0, postfx)) as { url: string }; setExportUrl(r.url); }
     finally { setExporting(false); }
   };
 
@@ -217,6 +218,16 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
           className="h-10 px-5 text-sm font-medium text-primary-foreground">
           {generating && <Loader2 className="size-4 animate-spin" />} 生成全部
         </ShimmerButton>
+        <Select value={postfx} onValueChange={(v) => setPostfx(v as typeof postfx)}>
+          <SelectTrigger className="w-[7.5rem] h-10 text-sm" aria-label="质感预设">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">质感：原样</SelectItem>
+            <SelectItem value="film">质感：胶片</SelectItem>
+            <SelectItem value="clean">质感：清爽</SelectItem>
+          </SelectContent>
+        </Select>
         <Button variant="outline" disabled={!allDone || exporting} onClick={() => setConfirmOpen(true)}>
           {exporting && <Loader2 className="size-4 animate-spin" />} 导出成片
         </Button>

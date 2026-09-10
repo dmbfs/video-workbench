@@ -37,8 +37,8 @@ export const api = {
   delSegment: (sid: string) => fetch(`/api/segments/${sid}`, { method: "DELETE" }).then(j),
   generateSegment: (sid: string) => fetch(`/api/segments/${sid}/generate`, { method: "POST" }).then(j),
   generateAll: (pid: string) => fetch(`/api/projects/${pid}/generate-all`, { method: "POST" }).then(j),
-  export: (pid: string, crossfadeMs = 0) =>
-    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs }) }).then(j),
+  export: (pid: string, crossfadeMs = 0, postfx: "none" | "film" | "clean" = "none") =>
+    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs, postfx }) }).then(j),
   settings: (): Promise<PublicSettings> => fetch("/api/settings").then(j),
   saveSettings: (s: unknown) =>
     fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) }).then(j),

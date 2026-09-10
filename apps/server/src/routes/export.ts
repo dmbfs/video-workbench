@@ -7,7 +7,7 @@ import { exportSchema } from "@vidstitch/shared";
 export async function exportRoutes(app: FastifyInstance) {
   app.post("/api/projects/:id/export", async (req, reply) => {
     const { id } = req.params as any;
-    const { crossfadeMs } = exportSchema.parse(req.body ?? {});
+    const { crossfadeMs, postfx } = exportSchema.parse(req.body ?? {});
     const rows = db
       .prepare("SELECT video_path, transition_out FROM segments WHERE project_id=? AND status='succeeded' AND video_path IS NOT NULL ORDER BY idx")
       .all(id) as { video_path: string; transition_out: string }[];
@@ -20,7 +20,7 @@ export async function exportRoutes(app: FastifyInstance) {
     const sb = db.prepare("SELECT ratio FROM storyboards WHERE project_id=?").get(id) as { ratio: "16:9" | "9:16" };
     const out = await stitch(id, rows.map((r) => r.video_path!), sb.ratio, crossfades, (pct, stage) => {
       broadcast({ type: "export_progress", stage, pct }, id);
-    });
+    }, postfx);
     const url = `/files/projects/${id}/final.mp4`;
     broadcast({ type: "final_ready", url }, id);
     return { url, path: out };

@@ -42,6 +42,14 @@ function probeVideoSize(file: string): Promise<{ w: number; h: number }> {
 const QUALITY_VCODEC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
 const QUALITY_ACODEC = ["-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "192k"];
 
+/** 质感后处理预设（skills/video-postfx/SKILL.md 有实测记录） */
+const POSTFX_FILTERS: Record<string, string> = {
+  // 胶片感：压对比微降饱和 + 动态颗粒 + 轻晕影（模拟胶片暗角）
+  film: "eq=contrast=1.06:saturation=0.90,noise=alls=8:allf=t,vignette=angle=PI/5",
+  // 清爽网感：微提对比饱和 + 轻锐化（社媒直出观感）
+  clean: "eq=contrast=1.05:saturation=1.10,unsharp=5:5:0.6:5:5:0.0",
+};
+
 /** 抽取视频末帧为 base64 jpeg（首尾帧接力：作为下一段图生视频的首帧参考） */
 export function extractLastFrame(file: string): Promise<string> {
   return new Promise((res, rej) => {
@@ -74,6 +82,7 @@ export async function stitch(
   ratio: "16:9" | "9:16",
   crossfades: number[], // 每个边界的转场 ms；长度 = segPaths.length - 1
   onPct: (pct: number, stage: "normalizing" | "concatenating" | "done") => void,
+  postfx: "none" | "film" | "clean" = "none",
 ): Promise<string> {
   // 目标分辨率自适应（PRD §7.6）：跟随各段源的最大清晰度档位——任一段高边 ≥1600px 视为 1080p 类
   // （1920x1080 / 1080x1920），否则保持 720p 类；避免全 720p 项目（mock / MiniMax 768P）被无谓上采样
@@ -89,11 +98,15 @@ export async function stitch(
   mkdirSync(tmp, { recursive: true });
 
   const norm: string[] = [];
+  const postfxChain = POSTFX_FILTERS[postfx] ?? "";
   for (let i = 0; i < segPaths.length; i++) {
     const o = path.join(tmp, `n${i}.mp4`);
     await run([
       "-y", "-i", segPaths[i],
-      "-vf", `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p`,
+      "-vf",
+      // 顺序：几何归一化 → fps → 质感后处理 → 像素格式收尾
+      [`scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,fps=30`,
+       postfxChain, "format=yuv420p"].filter(Boolean).join(","),
       ...QUALITY_VCODEC,
       ...QUALITY_ACODEC,
       o,

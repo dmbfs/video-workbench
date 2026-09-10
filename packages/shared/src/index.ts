@@ -67,7 +67,12 @@ export const patchSegmentSchema = z.object({
   prompt: z.string().min(1).optional(), duration: z.number().int().min(4).max(30).optional(),
   transitionOut: transitionSchema.optional(),
 });
-export const exportSchema = z.object({ crossfadeMs: z.number().int().min(0).max(2000).default(0) });
+export const exportSchema = z.object({
+  crossfadeMs: z.number().int().min(0).max(2000).default(0),
+  /** 导出质感预设（PRD §7.6）：none 原样 / film 胶片感 / clean 清爽网感 */
+  postfx: z.enum(["none", "film", "clean"]).default("none"),
+});
+export type Postfx = z.infer<typeof exportSchema>["postfx"];
 export const updateSettingsSchema = settingsSchema;
 /** 段序调整：order 为全部分镜 id 的新顺序 */
 export const reorderSegmentsSchema = z.object({ order: z.array(z.string()).min(1) });

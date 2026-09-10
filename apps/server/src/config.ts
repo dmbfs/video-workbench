@@ -14,3 +14,7 @@ export const POLL_TIMEOUT_MS = envInt("VIDSTITCH_POLL_TIMEOUT_MS", 10 * 60_000);
 export const MAX_CALLS_PER_PROJECT = envInt("VIDSTITCH_MAX_CALLS_PER_PROJECT", 30);
 /** 连续多少段终态失败后熔断该项目的排队任务 */
 export const BREAKER_FAILURE_THRESHOLD = envInt("VIDSTITCH_BREAKER_FAILURE_THRESHOLD", 3);
+
+/** 生成请求的期望清晰度档位（VIDSTITCH_RESOLUTION=720p 可降档省成本）；实际按 provider 能力收紧 */
+export const DESIRED_RESOLUTION: "720p" | "1080p" =
+  process.env.VIDSTITCH_RESOLUTION === "720p" ? "720p" : "1080p";

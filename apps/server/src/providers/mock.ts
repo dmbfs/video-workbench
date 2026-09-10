@@ -11,7 +11,8 @@ const jobs = new Map<string, MockJob>();
 /** 本地合成假视频：testsrc2 彩条 + 正弦音；段间色相(hue)与音调(frequency)随 idx 递变，肉眼/耳验拼接顺序 */
 export class MockProvider implements VideoProvider {
   kind = "mock";
-  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true }; }
+  // mock 固定出 720p：e2e/QA 断言（如竖屏 720x1280）与导出目标分辨率口径都依赖它
+  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true, maxResolution: "720p" }; }
 
   async createTask(req: CreateTaskReq, ctx: CreateTaskCtx) {
     const taskId = `mock_${ctx.segmentId}`;

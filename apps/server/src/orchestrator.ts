@@ -5,7 +5,7 @@ import { getSettings } from "./settings.js";
 import { getVideoProvider } from "./providers/factory.js";
 import { broadcast } from "./sse.js";
 import { extractLastFrame } from "./stitch.js";
-import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT, BREAKER_FAILURE_THRESHOLD } from "./config.js";
+import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT, BREAKER_FAILURE_THRESHOLD, DESIRED_RESOLUTION } from "./config.js";
 import type { ProviderConfig, Segment, SegmentStatus } from "@vidstitch/shared";
 
 /** 视频类 provider kind（与 settings.ts 的 VIDEO_KINDS 保持一致） */
@@ -127,9 +127,11 @@ class Orchestrator {
       // 风格前缀拼接（PRD §7.3）：段内不重复风格词，统一由 stylePrefix 承载，调用时拼进 prompt
       const stylePrefix = (sb?.style_prefix ?? "").trim();
       const prompt = stylePrefix ? `${stylePrefix}, ${s.prompt}` : s.prompt;
+      // 清晰度档位：期望档按 provider 能力收紧（PRD §7.6 高质感口径）
+      const resolution = DESIRED_RESOLUTION === "1080p" && caps.maxResolution === "1080p" ? "1080p" : "720p";
 
       const { taskId } = await provider.createTask(
-        { prompt, duration: s.duration, ratio: sb?.ratio ?? "16:9", withAudio: (sb?.with_audio ?? 1) === 1, firstFrameB64 },
+        { prompt, duration: s.duration, ratio: sb?.ratio ?? "16:9", withAudio: (sb?.with_audio ?? 1) === 1, firstFrameB64, resolution },
         { projectId: s.projectId, segmentId, idx: s.idx },
       );
       recordGenerationCall(s.projectId, segmentId, cfg.id);

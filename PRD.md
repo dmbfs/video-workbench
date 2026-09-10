@@ -133,7 +133,9 @@ GET      /files/*                            成品/分段视频静态服务
 
 ### 7.6 拼接管线
 
-下载各段 → 统一（scale/crop 至目标分辨率、fps 30、yuv420p、aac 48k 立体声——Seedance 分段带原生音轨，叠化时音频走 `acrossfade`）→ 硬切用 concat demuxer / 叠化用 `xfade` 链式滤镜 → 写入 `data/projects/:id/final.mp4`。接力帧：`ffmpeg -sseof -0.1 -i seg.mp4 -frames:v 1`。
+下载各段 → 统一（scale/crop 至目标分辨率、fps 30、yuv420p、aac 48k 立体声 192k——Seedance 分段带原生音轨，叠化时音频走 `acrossfade`）→ 硬切用 concat demuxer / 叠化用 `xfade` 链式滤镜（成片均加 `-movflags +faststart`）→ 写入 `data/projects/:id/final.mp4`。接力帧：`ffmpeg -sseof -0.1 -i seg.mp4 -frames:v 1`。
+
+**清晰度档位**：生成侧按 provider `capabilities().maxResolution` 收紧请求期望档（`VIDSTITCH_RESOLUTION` 环境变量可降回 720p 省成本，默认 1080p）——Seedance（含 TokenDance 网关）传 `1080p`，MiniMax H3（768P/2K，无 1080p 档）与 OpenAI video size 契约（无 16:9 1080p）保持默认；导出目标分辨率自适应段源：任一段高边 ≥1600px 视为 1080p 类（1920x1080 / 1080x1920），否则维持 720p 类（1280x720 / 720x1280），全 720p 项目不做无谓上采样。统一编码 `libx264 -preset medium -crf 18`（原 veryfast 速度优先口径升级为质感优先）。
 
 **分段数自适应**：编排器按模型 `maxSegmentDuration` 决定拆段——Seedance 2.5 上限 30s（30s 视频单段直出），MiniMax H3 上限 15s（30s=2 段接力）。用户手动分段仍可覆盖自动策略。
 

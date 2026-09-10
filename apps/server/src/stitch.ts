@@ -26,6 +26,22 @@ function probeDuration(file: string): Promise<number> {
   });
 }
 
+function probeVideoSize(file: string): Promise<{ w: number; h: number }> {
+  return new Promise((res, rej) => {
+    const p = spawn(ffprobePath, ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", file], { stdio: "pipe" });
+    let out = "";
+    p.stdout.on("data", (d) => (out += d));
+    p.on("exit", (c) => {
+      const m = out.trim().match(/^(\d+)x(\d+)$/);
+      c === 0 && m ? res({ w: +m[1], h: +m[2] }) : rej(new Error("ffprobe size: " + out.trim()));
+    });
+  });
+}
+
+/** 高质感统一编码参数（PRD §7.6）：CRF 18 + medium 兼顾观感与体积；音频 192k；成片 faststart 利于网页起播 */
+const QUALITY_VCODEC = ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
+const QUALITY_ACODEC = ["-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "192k"];
+
 /** 抽取视频末帧为 base64 jpeg（首尾帧接力：作为下一段图生视频的首帧参考） */
 export function extractLastFrame(file: string): Promise<string> {
   return new Promise((res, rej) => {
@@ -59,7 +75,14 @@ export async function stitch(
   crossfades: number[], // 每个边界的转场 ms；长度 = segPaths.length - 1
   onPct: (pct: number, stage: "normalizing" | "concatenating" | "done") => void,
 ): Promise<string> {
-  const size = ratio === "16:9" ? "1280x720" : "720x1280";
+  // 目标分辨率自适应（PRD §7.6）：跟随各段源的最大清晰度档位——任一段高边 ≥1600px 视为 1080p 类
+  // （1920x1080 / 1080x1920），否则保持 720p 类；避免全 720p 项目（mock / MiniMax 768P）被无谓上采样
+  let maxEdge = 0;
+  for (const f of segPaths) {
+    const s = await probeVideoSize(f);
+    maxEdge = Math.max(maxEdge, s.w, s.h);
+  }
+  const size = ratio === "16:9" ? (maxEdge >= 1600 ? "1920x1080" : "1280x720") : (maxEdge >= 1600 ? "1080x1920" : "720x1280");
   const [w, h] = size.split("x");
   const dir = path.join(dataRoot, "projects", projectId);
   const tmp = path.join(dir, "tmp");
@@ -71,8 +94,8 @@ export async function stitch(
     await run([
       "-y", "-i", segPaths[i],
       "-vf", `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p`,
-      "-c:v", "libx264", "-preset", "veryfast",
-      "-c:a", "aac", "-ar", "48000", "-ac", "2",
+      ...QUALITY_VCODEC,
+      ...QUALITY_ACODEC,
       o,
     ]);
     norm.push(o);
@@ -86,7 +109,7 @@ export async function stitch(
     // 硬切：concat demuxer 流复制
     const list = path.join(tmp, "list.txt");
     writeFileSync(list, norm.map((p) => `file '${p.replace(/\\/g, "/")}'`).join("\n"));
-    await run(["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", out]);
+    await run(["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", out]);
     onPct(100, "done");
     return out;
   }
@@ -115,8 +138,9 @@ export async function stitch(
     ...norm.map((f) => ["-i", f]).flat(),
     "-filter_complex", fc.join(";"),
     "-map", vIn, "-map", aIn,
-    "-c:v", "libx264", "-preset", "veryfast",
-    "-c:a", "aac", "-ar", "48000", "-ac", "2",
+    ...QUALITY_VCODEC,
+    ...QUALITY_ACODEC,
+    "-movflags", "+faststart",
     out,
   ]);
   onPct(100, "done");

@@ -9,7 +9,7 @@
 
 ## 仓库布局
 
-- `skills/` — 已安装的 agent skills（superpowers、minimax-cli、remotion）
+- `skills/` — 已安装的 agent skills（superpowers 精选、官方 skill-creator、minimax-cli、remotion、前端三件套、webapp-testing、video-postfx）
 - `docs/` — 调研与计划文档；`docs/superpowers/plans/` 存放各里程碑实施计划
 - `.firecrawl/` — Firecrawl 抓取证据（原始 markdown）
 - 后续 `apps/web`、`apps/server`、`packages/shared` 按 PRD §8 创建
@@ -36,6 +36,11 @@
 - 视频质感后处理：`skills/video-postfx/`（调色/颗粒/晕影/锐化预设配方，已接入导出管线 `POSTFX_FILTERS`；新增预设须按其步骤登记）
 - 分镜脚本写作：不用通用技能；素材为 `.firecrawl/h3-prompt.md`（H3 官方示例库）、`.firecrawl/seedance-json-prompt.md`（Seedance JSON 字段结构）与 PRD §7.3 六要素模板；写系统提示词时可参考 Piebald-AI/claude-code-system-prompts（12.6k★）
 - 流程纪律：`skills/superpowers/`（writing-plans / executing-plans，见上节）
+- 排障：`skills/systematic-debugging/`（provider 报错 / 熔断误触发 / 拼接产物异常等非显而易见 bug，动手前先读；配套 root-cause-tracing / defense-in-depth / condition-based-waiting 参考）
+- 完成前验收：`skills/verification-before-completion/`（每个任务宣告完成前必过一遍，配合 §自检）
+- 立项澄清：`skills/brainstorming/`（PRD 变更 / 新功能动手前，先澄清单一问题再写计划）
+- 技能创作：`skills/skill-creator/`（官方元技能；新增或改写 `skills/` 下任何 skill 时用它的格式与校验流程）
+- 未安装备查：test-driven-development（待建单测基建）、docx/pptx/xlsx/pdf（办公文档场景）、mcp-builder（本环境无 MCP 客户端）、worktrees / subagent 系（单线开发，见上节）
 
 ## 自检
 

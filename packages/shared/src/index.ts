@@ -62,6 +62,8 @@ export const sseEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("chain_progress"), step: z.string(), detail: z.string() }),
   z.object({ type: z.literal("chain_done"), url: z.string() }),
   z.object({ type: z.literal("chain_error"), step: z.string(), error: z.string() }),
+  // BGM 变更（M5c）：ext 为当前 BGM 扩展名，null 表示已清除
+  z.object({ type: z.literal("bgm_changed"), ext: z.string().nullable() }),
 ]);
 export type SseEvent = z.infer<typeof sseEventSchema>;
 
@@ -83,6 +85,8 @@ export const exportSchema = z.object({
   crossfadeMs: z.number().int().min(0).max(2000).default(0),
   /** 导出质感预设（PRD §7.6）：none 原样 / film 胶片感 / clean 清爽网感 */
   postfx: z.enum(["none", "film", "clean"]).default("none"),
+  /** 旁白字幕烧录（M5b）：有旁白词级时间轴时把字幕烧进画面；默认开 */
+  subtitle: z.boolean().default(true),
 });
 export type Postfx = z.infer<typeof exportSchema>["postfx"];
 export const updateSettingsSchema = settingsSchema;

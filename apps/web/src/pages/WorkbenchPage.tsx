@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Blend, Loader2, RefreshCw, Scissors, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Blend, Loader2, Music, RefreshCw, Scissors, Trash2 } from "lucide-react";
 import { api, subscribeEvents } from "@/lib/api";
 import type { Segment, SegmentStatus, StoryboardProposal } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,9 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [postfx, setPostfx] = useState<"none" | "film" | "clean">("none");
+  const [subtitle, setSubtitle] = useState(true);
+  const [bgmExt, setBgmExt] = useState<string | null>(null);
+  const bgmInput = useRef<HTMLInputElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
   const [proposal, setProposal] = useState<StoryboardProposal | null>(null);
@@ -43,8 +46,15 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
       setSegments(d.segments);
       setGenerating((g) => g && d.segments.some((s) => s.status === "generating" || s.status === "pending"));
     });
+    api.getBgm(ref.current).then((b) => setBgmExt(b.ext)).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const uploadBgm = async (f: File) => {
+    if (!f || f.size > 20 * 1024 * 1024) return;
+    const r = (await api.uploadBgm(ref.current, f)) as { ok: boolean; ext?: string };
+    if (r.ok && r.ext) setBgmExt(r.ext);
+  };
   useEffect(() => {
     // Mock 透明化：生效的默认对话/视频模型是 mock 时明示，避免把脚本假数据当成真生成
     api.settings().then((s) => {
@@ -108,7 +118,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const totalDur = segments.reduce((a, s) => a + s.duration, 0);
   const doExport = async () => {
     setConfirmOpen(false); setExporting(true);
-    try { const r = (await api.export(ref.current, 0, postfx)) as { url: string }; setExportUrl(r.url); }
+    try { const r = (await api.export(ref.current, 0, postfx, subtitle)) as { url: string }; setExportUrl(r.url); }
     finally { setExporting(false); }
   };
 
@@ -228,6 +238,22 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
             <SelectItem value="clean">质感：清爽</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" className="h-10 text-sm" disabled={!allDone}
+          onClick={() => setSubtitle((v) => !v)} title="有旁白时把字幕烧进画面">
+          字幕：{subtitle ? "开" : "关"}
+        </Button>
+        <Button variant="outline" className="h-10 text-sm" title="上传 BGM（mp3/m4a/wav，≤20MB），导出时自动循环铺底并在旁白处闪避"
+          onClick={() => bgmInput.current?.click()}>
+          <Music className="size-4" /> {bgmExt ? `BGM.${bgmExt}` : "BGM"}
+        </Button>
+        {bgmExt && (
+          <Button variant="ghost" className="h-10 text-sm text-muted-foreground" title="清除 BGM"
+            onClick={async () => { await api.clearBgm(ref.current); setBgmExt(null); }}>
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+        <input ref={bgmInput} type="file" accept=".mp3,.m4a,.wav,audio/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadBgm(f); e.target.value = ""; }} />
         <Button variant="outline" disabled={!allDone || exporting} onClick={() => setConfirmOpen(true)}>
           {exporting && <Loader2 className="size-4 animate-spin" />} 导出成片
         </Button>

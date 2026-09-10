@@ -22,7 +22,8 @@ const narrationScriptSchema = z.object({
   })).min(1),
 });
 
-export interface NarrationSegment { idx: number; text: string; file: string; durationSec: number }
+export interface NarrationCue { word: string; start: number; end: number }
+export interface NarrationSegment { idx: number; text: string; file: string; durationSec: number; cues?: NarrationCue[] }
 export interface NarrationManifest {
   generatedAt: string;
   tts: { kind: string; model?: string; voice?: string };
@@ -66,7 +67,7 @@ export const narration = {
     const script = await askJSON(ctx.provider, messages, narrationScriptSchema, "旁白稿");
     const byIdx = new Map(script.segments.map((s) => [s.idx, s.text.trim()]));
 
-    // 2) 逐段 TTS（顺序合成，段间独立；超长由 provider 压速）
+    // 2) 逐段 TTS（顺序合成，段间独立；超长由 provider 压速并同步换算字幕时间轴）
     const tts = pickTts();
     const dir = narrationDir(projectId);
     mkdirSync(dir, { recursive: true });
@@ -76,9 +77,9 @@ export const narration = {
       const text = byIdx.get(s.idx);
       if (!text) throw new Error(`旁白稿缺少第 ${s.idx} 段`);
       const file = path.join(dir, `seg-${String(s.idx).padStart(2, "0")}.mp3`);
-      const r = await tts.synthesize(text, file, s.duration - 0.3);
+      const r = await tts.synthesize(text, file, { targetDurationSec: s.duration - 0.3, withCues: true });
       totalChars += r.chars;
-      out.push({ idx: s.idx, text, file, durationSec: r.durationSec });
+      out.push({ idx: s.idx, text, file, durationSec: r.durationSec, ...(r.cues ? { cues: r.cues } : {}) });
     }
 
     // 3) 写清单（临时文件先行，避免半写状态被导出读到）

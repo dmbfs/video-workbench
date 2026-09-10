@@ -40,15 +40,15 @@
 - [x] Commit `feat(narration)`
 
 ### Task 2 (M5b): 字幕烧录
-- [ ] T2A `subtitle_enable:true, subtitle_type:"word"` 探针（一次极小成本）→ narration.json 增词级时间轴
-- [ ] 段起点偏移 → 全局 ASS（字体/描边/安全区）→ 导出开关 `subtitle: boolean`
-- [ ] e2e 断言字幕文件与烧录产物
+- [x] T2A `subtitle_enable:true, subtitle_type:"word"` 探针（一次极小成本）→ narration.json 增词级时间轴
+- [x] 段起点偏移 → 全局 ASS（字体/描边/安全区）→ 导出开关 `subtitle: boolean`
+- [x] e2e 断言字幕文件与烧录产物
 
 ### Task 3 (M5c): BGM 混音
-- [ ] `POST /api/projects/:id/bgm` 上传（≤20MB，mp3/m4a/wav）落 `bgm{ext}`
-- [ ] 导出混音：循环铺满 + 音量 0.18 + 旁白处闪避（sidechaincompress）+ 首尾淡入淡出
-- [ ] Workbench 上传/清除入口
+- [x] `POST /api/projects/:id/bgm` 上传（≤20MB，mp3/m4a/wav）落 `bgm{ext}`
+- [x] 导出混音：循环铺满 + 音量 0.18 + 旁白处闪避（sidechaincompress）+ 首尾淡入淡出
+- [x] Workbench 上传/清除入口
 
 ### Task 4: 文档
-- [ ] PRD §7.8 链图增 narration（含非致命语义）；FR-13 旁白/字幕/BGM
-- [ ] skills/README.md 契约表 +1 行；本计划勾选
+- [x] PRD §7.8 链图增 narration（含非致命语义）；FR-13 旁白/字幕/BGM
+- [x] skills/README.md 契约表 +1 行；本计划勾选

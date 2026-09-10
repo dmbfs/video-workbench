@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import ffmpegPath from "ffmpeg-static";
 import { path as ffprobePath } from "@ffprobe-installer/ffprobe";
@@ -70,26 +70,36 @@ export function extractLastFrame(file: string): Promise<string> {
   });
 }
 
+/** 查项目 BGM 文件（M5c：允许 mp3/m4a/wav，存在即用） */
+export function findBgm(projectId: string): string | null {
+  for (const e of ["mp3", "m4a", "wav"]) {
+    const p = path.join(dataRoot, "projects", projectId, `bgm.${e}`);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 /**
- * 旁白混入（M5a）：把 narration/seg-XX.mp3 按段起点对齐铺成整条旁白轨，与成片原声混合。
+ * 旁白 + BGM 混音（M5a/M5c）：把旁白按段起点对齐、BGM 循环铺满并闪避，与成片原声合成一条音轨。
  * - 段起点 = 前段时长累计 − xfade 重叠修正（crossfades[i-1]）
- * - 人声优先：原声压至 0.55，旁白 1.0，汇总后限幅防削波
- * - 成片无音轨时旁白独占（直接替换音轨）
- * 混音只动音频轨，视频流复制，成片时长不变。
+ * - 电平：原声 0.55 / 旁白 1.0 / BGM 0.18（旁白处 sidechain 闪避），汇总限幅防削波
+ * - 成片无音轨时旁白+BGM 独占；混音只动音频轨，成片时长不变
  */
 export async function mixNarration(
   finalPath: string,
   narrationSegments: { file: string; idx: number }[],
   segDurations: number[],
   crossfades: number[],
+  bgmFile?: string | null,
 ): Promise<void> {
-  // 段起点（秒）：前段时长累计 − 前面所有转场的重叠
+  // 段起点（秒）：前段时长累计 − 前面所有转场的重叠；末次累计即成片总时长
   const starts: number[] = [];
   let acc = 0;
   for (let i = 0; i < segDurations.length; i++) {
     starts.push(acc);
     acc += segDurations[i] - (crossfades[i] ?? 0) / 1000;
   }
+  const totalDur = Math.max(acc, 1);
   const hasAudio = await new Promise<boolean>((res) => {
     const p = spawn(ffprobePath, ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", finalPath], { stdio: "pipe" });
     let out = "";
@@ -97,26 +107,54 @@ export async function mixNarration(
     p.on("exit", () => res(out.trim().length > 0));
   });
 
-  // 旁白轨：每条 adelay 到位后 amix 汇总（normalize=0 保持电平）
-  const inputs = narrationSegments.map((n) => ["-i", n.file]).flat();
+  const args = ["-y", "-i", finalPath];
   const chains: string[] = [];
-  const labels: string[] = [];
+  const narrLabels: string[] = [];
   narrationSegments.forEach((n, i) => {
+    args.push("-i", n.file);
     const delayMs = Math.max(0, Math.round((starts[n.idx - 1] ?? 0) * 1000));
     chains.push(`[${i + 1}:a]adelay=${delayMs}|${delayMs}[d${i}]`);
-    labels.push(`[d${i}]`);
+    narrLabels.push(`[d${i}]`);
   });
-  const narrChain = labels.length === 1
-    ? `${labels[0]}anull[narr]`
-    : `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0[narr]`;
-  const tail = hasAudio
-    ? `[0:a]volume=0.55[bg];[bg][narr]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`
-    : `[narr]anull[aout]`;
+  // BGM 输入放最后，循环铺满 + 音量 + 首尾淡入淡出
+  let bgmIdx: number | null = null;
+  if (bgmFile) {
+    bgmIdx = narrationSegments.length + 1;
+    args.push("-stream_loop", "-1", "-i", bgmFile);
+    const fadeOut = Math.max(totalDur - 1.5, 0).toFixed(3);
+    chains.push(`[${bgmIdx}:a]atrim=duration=${totalDur.toFixed(3)},volume=0.18,afade=t=in:st=0:d=1.5,afade=t=out:st=${fadeOut}:d=1.5[m]`);
+  }
+  const narrChain = narrationSegments.length === 0
+    ? ""
+    : narrationSegments.length === 1
+      ? `${narrLabels[0]}anull[narr]`
+      : `${narrLabels.join("")}amix=inputs=${narrLabels.length}:duration=longest:normalize=0[narr]`;
+  if (chains.length) chains.push(""); // 仅用于可读性分隔，join 后为空串占位
+
+  // 汇总段：按可用轨道组合
+  const hasNarr = narrationSegments.length > 0;
+  let tail: string;
+  if (hasNarr && bgmFile) {
+    chains.push(`[m][narr]sidechaincompress=threshold=0.05:ratio=5:attack=120:release=450[bgmD]`);
+    tail = hasAudio
+      ? `[0:a]volume=0.55[bg];[bg][narr][bgmD]amix=inputs=3:duration=first:normalize=0,alimiter=limit=0.95[aout]`
+      : `[narr][bgmD]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`;
+  } else if (hasNarr) {
+    tail = hasAudio
+      ? `[0:a]volume=0.55[bg];[bg][narr]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`
+      : `[narr]anull[aout]`;
+  } else if (bgmFile) {
+    tail = hasAudio
+      ? `[0:a]volume=0.8[bg];[bg][m]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`
+      : `[m]anull[aout]`;
+  } else {
+    return; // 没有任何要混的东西
+  }
 
   const mixed = finalPath.replace(/\.mp4$/, ".mixed.mp4");
   await run([
-    "-y", "-i", finalPath, ...inputs,
-    "-filter_complex", `${chains.join(";")};${narrChain};${tail}`,
+    ...args,
+    "-filter_complex", [...chains.filter(Boolean), narrChain, tail].filter(Boolean).join(";"),
     "-map", "0:v", "-map", "[aout]",
     ...QUALITY_ACODEC,
     "-movflags", "+faststart",
@@ -125,6 +163,79 @@ export async function mixNarration(
   const { renameSync, rmSync } = await import("node:fs");
   rmSync(finalPath, { force: true });
   renameSync(mixed, finalPath);
+}
+
+/**
+ * 旁白字幕烧录（M5b）：narration.json 的词级时间轴 → 段起点偏移（含 xfade 修正）→ 分行 → ASS → subtitles 滤镜。
+ * 分行策略：连续词累计到 ~12 字 / 遇句读 / 满 3s 即断行；行尾延长到下一行开始（≤0.4s）保证阅读连续。
+ * 视频需重编码（字幕烧进画面），音频流复制（已混音完成）。
+ */
+export async function burnSubtitles(
+  finalPath: string,
+  projectId: string,
+  segDurations: number[],
+  crossfades: number[],
+  narrationSegments: { idx: number; cues: { word: string; start: number; end: number }[] }[],
+): Promise<void> {
+  // 段起点（与 mixNarration 同口径）
+  const starts: number[] = [];
+  let acc = 0;
+  for (let i = 0; i < segDurations.length; i++) { starts.push(acc); acc += segDurations[i] - (crossfades[i] ?? 0) / 1000; }
+
+  // 全局词级 cues
+  const global: { word: string; start: number; end: number }[] = [];
+  for (const seg of narrationSegments) {
+    const off = starts[seg.idx - 1] ?? 0;
+    for (const c of seg.cues) global.push({ word: c.word, start: off + c.start, end: off + c.end });
+  }
+  if (global.length === 0) return;
+
+  // 分行：~12 字 / 句读 / 3s
+  const lines: { text: string; start: number; end: number }[] = [];
+  let cur: { words: string[]; start: number; end: number } | null = null;
+  const flush = () => { if (cur) { lines.push({ text: cur.words.join(""), start: cur.start, end: cur.end }); cur = null; } };
+  for (const c of global) {
+    if (!cur) cur = { words: [c.word], start: c.start, end: c.end };
+    else { cur.words.push(c.word); cur.end = c.end; }
+    if (/[。！？，、；：…]/.test(c.word) || cur.words.join("").length >= 12 || c.end - cur.start >= 3) flush();
+  }
+  flush();
+  // 行尾延到下一行开始（≤0.4s），避免黑屏闪烁
+  for (let i = 0; i < lines.length - 1; i++) lines[i].end = Math.min(lines[i + 1].start, lines[i].end + 0.4);
+
+  // 成片分辨率 → ASS PlayRes 与字号
+  const size = await new Promise<{ w: number; h: number }>((res, rej) => {
+    const p = spawn(ffprobePath, ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", finalPath], { stdio: "pipe" });
+    let out = "";
+    p.stdout.on("data", (d) => (out += d));
+    p.on("exit", (c) => { const m = out.trim().match(/^(\d+)x(\d+)$/); c === 0 && m ? res({ w: +m[1], h: +m[2] }) : rej(new Error("ffprobe size: " + out.trim())); });
+  });
+  const fmt = (t: number) => { const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = Math.floor(t % 60), cs = Math.round((t % 1) * 100); return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(cs).padStart(2, "0")}`; };
+  const ass = [
+    "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${size.w}`, `PlayResY: ${size.h}`, "WrapStyle: 2", "",
+    "[V4+ Styles]",
+    `Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding`,
+    `Style: Narr,Microsoft YaHei,${Math.round(size.h * 0.052)},&H00FFFFFF,&H00FFFFFF,&H00101010,&H7F000000,1,0,0,0,100,100,0,0,1,${Math.max(2, Math.round(size.h / 300))},1,2,${Math.round(size.w * 0.06)},${Math.round(size.w * 0.06)},${Math.round(size.h * 0.055)},1`,
+    "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ...lines.map((l) => `Dialogue: 0,${fmt(l.start)},${fmt(l.end)},Narr,,0,0,0,,${l.text}`),
+  ].join("\n");
+  const assPath = finalPath.replace(/\.mp4$/, ".ass");
+  writeFileSync(assPath, ass, "utf8");
+
+  // Windows 路径进滤镜要转义：反斜杠→斜杠、盘符冒号→\:
+  const esc = assPath.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "");
+  const burned = finalPath.replace(/\.mp4$/, ".sub.mp4");
+  await run([
+    "-y", "-i", finalPath,
+    "-vf", `ass=filename='${esc}'`,
+    ...QUALITY_VCODEC,
+    "-c:a", "copy",
+    "-movflags", "+faststart",
+    burned,
+  ]);
+  const { renameSync, rmSync } = await import("node:fs");
+  rmSync(finalPath, { force: true });
+  renameSync(burned, finalPath);
 }
 
 /**

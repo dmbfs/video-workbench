@@ -32,7 +32,7 @@
 | video-gen | `projectId` | `{count}` | 任一段 failed 上抛（含段序+原因），链不自动重试付费任务 |
 | narration | `projectId` | `{count, totalChars}` | **非致命**：任一环节失败仅 ⚠️ 落聊天消息，链继续（成片不含旁白） |
 | postfx-grade | `postfx` | `{postfx}` | 未知预设上抛 |
-| stitch-export | `{crossfadeMs, postfx}` | `{url, path, narrationMixed}` | 无完成分段 / ffmpeg 失败上抛；旁白混入失败降级为无旁白成片 |
+| stitch-export | `{crossfadeMs, postfx, subtitle}` | `{url, path, narrationMixed, subtitleBurned}` | 无完成分段 / ffmpeg 失败上抛；旁白/字幕/混音失败逐级降级（成片仍产出） |
 
 TTS provider（`providers/tts.ts`）：`MiniMaxTtsProvider`（复用 minimax 视频 provider 的网关与 key，`/v1/t2a_v2`，音色/模型可 `VIDSTITCH_TTS_VOICE`/`VIDSTITCH_TTS_MODEL` 覆盖，超长自动 atempo ≤1.4 适配段时长）与 `MockTtsProvider`（ffmpeg 正弦波，e2e 零计费）。
 

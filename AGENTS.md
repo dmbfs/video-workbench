@@ -6,6 +6,7 @@
 - v1.1 变更：新增本地账号体系（PRD FR-11，手机号/邮箱 + 密码），除 `/api/auth/*` 与 `/api/health` 外全部 API 与 `/files` 需登录；e2e 脚本经 `scripts/lib-auth.mjs` 注册一次性账号
 - 里程碑与验收标准以 PRD §9 为准；PRD 变更须同步本文件与任务计划
 - 生成循环硬边界（轮询超时 / 单项目调用上限 / 连续失败熔断）以 PRD §6 为准，实现见 `apps/server/src/config.ts` 与 `orchestrator.ts`；生成清晰度档位（`VIDSTITCH_RESOLUTION`，默认 1080p、按 provider 能力收紧）与导出编码口径以 PRD §7.6 为准
+- 成片完整度口径（PRD FR-13/§7.8）：旁白为链上**非致命**步骤（失败仅告警，成片继续）；导出时旁白人声 1.0 / 原声 0.55 / BGM 0.18 循环铺底并随旁白闪避，字幕按 TTS 词级时间轴烧 ASS（默认开，导出可关）；e2e 必须硬注入 mock（`e2e-auto` 注入失败即拒跑，防真机计费事故）
 
 ## 仓库布局
 

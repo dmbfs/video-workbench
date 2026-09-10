@@ -12,11 +12,13 @@ import { getSettings } from "../settings.js";
  * 语音模型/音色复用 minimax 视频 provider 的 origin 与 key（不新增设置项）；
  * 找不到 minimax provider 时回退 MockTts（ffmpeg 正弦波），保证全链路零计费可演练。
  */
-export interface TtsResult { file: string; durationSec: number; chars: number }
+export interface TtsCue { word: string; start: number; end: number }
+export interface TtsResult { file: string; durationSec: number; chars: number; cues?: TtsCue[] }
 export interface TtsProvider {
   kind: string;
-  /** 合成一段语音到 outFile；targetDurationSec 给定时把超长音频压速适配（atempo ≤1.4，仍超则截断） */
-  synthesize(text: string, outFile: string, targetDurationSec?: number): Promise<TtsResult>;
+  /** 合成一段语音到 outFile；targetDurationSec 给定时把超长音频压速适配（atempo ≤1.4，仍超则截断）；
+   *  withCues=true 时附带词级时间轴（秒，相对本段音频起点），供字幕烧录用 */
+  synthesize(text: string, outFile: string, opts?: { targetDurationSec?: number; withCues?: boolean }): Promise<TtsResult>;
 }
 
 function ffprobeDuration(file: string): Promise<number> {
@@ -45,7 +47,8 @@ export class MiniMaxTtsProvider implements TtsProvider {
   kind = "minimax-tts";
   constructor(private cfg: { baseUrl: string; apiKey: string; modelId?: string; voiceId?: string }) {}
 
-  async synthesize(text: string, outFile: string, targetDurationSec?: number): Promise<TtsResult> {
+  async synthesize(text: string, outFile: string, opts?: { targetDurationSec?: number; withCues?: boolean }): Promise<TtsResult> {
+    const targetDurationSec = opts?.targetDurationSec;
     const r = await fetch(`${this.cfg.baseUrl.replace(/\/+$/, "")}/v1/t2a_v2`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.cfg.apiKey}` },
@@ -54,6 +57,7 @@ export class MiniMaxTtsProvider implements TtsProvider {
         text,
         voice_setting: { voice_id: this.cfg.voiceId ?? TTS_VOICE, speed: 1, vol: 1, pitch: 0 },
         audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3", channel: 1 },
+        ...(opts?.withCues ? { subtitle_enable: true, subtitle_type: "word" } : {}),
       }),
       signal: AbortSignal.timeout(60_000),
     });
@@ -65,6 +69,21 @@ export class MiniMaxTtsProvider implements TtsProvider {
     const buf = Buffer.from(String(j.data.audio), "hex");
     writeFileSync(outFile, buf);
     let durationSec = (j.extra_info?.audio_length ?? 0) > 0 ? j.extra_info.audio_length / 1000 : await ffprobeDuration(outFile);
+
+    // 词级时间轴（subtitle_file 是 24h 签名 URL，指向 JSON 数组，时间为毫秒、相对本段音频）
+    let cues: TtsCue[] | undefined;
+    if (opts?.withCues && typeof j.data?.subtitle_file === "string") {
+      try {
+        const arr = (await (await fetch(j.data.subtitle_file, { signal: AbortSignal.timeout(20_000) })).json()) as any[];
+        cues = (arr[0]?.timestamped_words ?? []).map((w: any) => ({
+          word: String(w.word ?? ""),
+          start: Number(w.time_begin) / 1000,
+          end: Number(w.time_end) / 1000,
+        })).filter((c: TtsCue) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end > c.start);
+      } catch {
+        cues = undefined; // 字幕失败不拖累音频（与旁白整体的非致命语义一致）
+      }
+    }
 
     // 超长适配：压速至目标时长内（旁白宁可快一点也不能压过下一段的画面起点）
     if (targetDurationSec && durationSec > targetDurationSec * 0.97) {
@@ -86,19 +105,27 @@ export class MiniMaxTtsProvider implements TtsProvider {
         rmSync(fitted, { force: true });
         rmSync(outFile.replace(/\.mp3$/, ".trim.mp3"), { force: true });
         durationSec = d;
+        // 音频被压速/截断，字幕时间轴必须同步换算，否则越往后偏差越大
+        if (cues) cues = cues.map((c) => ({ word: c.word, start: c.start / tempo, end: c.end / tempo }))
+          .filter((c) => c.start < durationSec);
       }
     }
-    return { file: outFile, durationSec, chars: Number(j.extra_info?.usage_characters ?? text.length) };
+    return { file: outFile, durationSec, chars: Number(j.extra_info?.usage_characters ?? text.length), cues };
   }
 }
 
-/** e2e/无 minimax provider 兜底：ffmpeg 正弦波占位音频（零计费），时长取目标的 ~60% */
+/** e2e/无 minimax provider 兜底：ffmpeg 正弦波占位音频（零计费），时长取目标的 ~60%；词级时间轴按字均摊 */
 export class MockTtsProvider implements TtsProvider {
   kind = "mock-tts";
-  async synthesize(text: string, outFile: string, targetDurationSec?: number): Promise<TtsResult> {
+  async synthesize(text: string, outFile: string, opts?: { targetDurationSec?: number; withCues?: boolean }): Promise<TtsResult> {
+    const targetDurationSec = opts?.targetDurationSec;
     const dur = Math.max(1, Math.min((targetDurationSec ?? 5) * 0.6, 8));
     await ffmpegRun(["-y", "-f", "lavfi", "-i", `sine=frequency=520:duration=${dur.toFixed(2)}`, "-b:a", "96000", outFile]);
-    return { file: outFile, durationSec: await ffprobeDuration(outFile), chars: text.length };
+    const chars = [...text.replace(/\s/g, "")];
+    const cues = opts?.withCues && chars.length > 0
+      ? chars.map((word, i) => ({ word, start: (dur * i) / chars.length, end: (dur * (i + 1)) / chars.length }))
+      : undefined;
+    return { file: outFile, durationSec: await ffprobeDuration(outFile), chars: text.length, cues };
   }
 }
 

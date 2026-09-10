@@ -129,6 +129,12 @@ afetch(`${API}/api/projects/${p1}`, { method: "DELETE" });
   else {
     const back = await (await afetch(`${API}/api/settings`)).json();
     console.log(`[restore] videoDefault=${back.videoDefaultId} · providers=${back.providers.map((p) => p.id).join(",")}`);
+    // 恢复完整性：orig 里每个 provider 都必须在恢复后的设置里（防静默丢配置，2026-09-10 事故教训）
+    const missing = (orig.providers ?? []).filter((p) => !back.providers?.some((q) => q.id === p.id));
+    if (missing.length > 0) { console.error("[restore INCOMPLETE] 缺失 provider:", missing.map((p) => p.id).join(",")); fail++; }
+    if (back.chatDefaultId !== orig.chatDefaultId || back.videoDefaultId !== orig.videoDefaultId) {
+      console.error("[restore INCOMPLETE] 默认模型不一致"); fail++;
+    }
   }
 }
 console.log(`done ${pass} pass / ${fail} fail`);

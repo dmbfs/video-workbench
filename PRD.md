@@ -51,7 +51,8 @@
 | FR-9 | 成本提示 | 生成前显示「将调用 N 次视频生成」 | P1 |
 | FR-10 | 画幅选择 | 16:9 / 9:16，生成与导出统一 | P1 |
 | FR-11 | 注册登录（v1.1） | 手机号或邮箱 + 密码（≥8 位）；scrypt 散列、会话 cookie（HttpOnly，30 天）；除注册/登录/健康检查外全部 API 与文件服务要求登录；登录失败限速（5 次锁 10 分钟）；手机号容忍 +86 前缀与连字符 | P0 |
-| FR-12 | 一键成片 skill 链（v1.2） | 一段 prompt 直达成片：`prompt-enhance → storyboard（自动采用）→ video-gen → postfx-grade → stitch-export` 五技能自动接力；进度经 SSE（chain_progress/done/error）与聊天面板可见；实现见 `apps/server/src/skills/`，入口 `POST /api/projects/auto` | P1 |
+| FR-12 | 一键成片 skill 链（v1.2） | 一段 prompt 直达成片：`prompt-enhance → storyboard（自动采用）→ video-gen → narration → postfx-grade → stitch-export` 六技能自动接力；进度经 SSE（chain_progress/done/error）与聊天面板可见；实现见 `apps/server/src/skills/`，入口 `POST /api/projects/auto` | P1 |
+| FR-13 | 成片完整度三件套（v1.3） | 旁白：聊天稿 + TTS（复用 MiniMax 网关，音色可 `VIDSTITCH_TTS_VOICE` 覆盖，超长自动压速），链上非致命；字幕：TTS 词级时间轴 → ASS 烧录（导出开关，默认开）；BGM：项目上传（mp3/m4a/wav ≤20MB）循环铺底、旁白处自动闪避、首尾淡入淡出 | P1 |
 
 ## 6. 非功能需求
 
@@ -160,10 +161,11 @@ GET      /files/*                            成品/分段视频静态服务
 1. `prompt-enhance`：一句话 → 拍摄 brief（主题/主体场景/英文风格关键词/节奏/负向）；
 2. `storyboard`：brief → 七要素结构化分镜（复用分镜顾问系统提示词，JSON 模式 + zod 自动纠错），**自动采用落库**（区别于交互流的确认制）；
 3. `video-gen`：时间线全段排队生成，编排器硬边界（轮询超时/调用上限/熔断/首尾帧接力）全部继承；
-4. `postfx-grade`：质感预设选定（扩展点，接 §7.6 后处理）；
-5. `stitch-export`：归一化 → 质感滤镜 → 拼接 → final.mp4。
+4. `narration`（FR-13，**非致命**）：旁白稿（聊天 JSON，字数 ≤ 段时长×4.5）→ 逐段 TTS（词级时间轴）→ 超长自动压速适配；失败仅告警，成片继续；
+5. `postfx-grade`：质感预设选定（扩展点，接 §7.6 后处理）；
+6. `stitch-export`：归一化 → 质感滤镜 → 拼接 → 旁白混入（人声优先）→ 字幕烧录（ASS，可关）→ BGM 混音 → final.mp4。
 
-约束：技能实现与对应路由**共用单一事实源**（分镜 JSON 生成/落库在 `skills/shared.ts`，导出在 `skills/stitch-export.ts`）；链层不重试付费任务（逐段重试沿用编排器策略）；进度走 SSE `chain_progress/done/error` 并落聊天消息；新增管线技能（TTS 旁白/字幕烧录/BGM 混音）= 新增技能文件 + chain 插入一步 + README 登记。
+约束：技能实现与对应路由**共用单一事实源**（分镜 JSON 生成/落库在 `skills/shared.ts`，导出在 `skills/stitch-export.ts`）；链层不重试付费任务（逐段重试沿用编排器策略）；进度走 SSE `chain_progress/done/error` 并落聊天消息；新增管线技能 = 新增技能文件 + chain 插入一步 + README 登记。
 
 ## 8. 技术栈（我的推荐，待联网验证后定稿）
 

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import path from "node:path";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { db, dataRoot } from "../db.js";
 import { newId } from "../settings.js";
 import { createProjectSchema, addSegmentSchema, reorderSegmentsSchema } from "@vidstitch/shared";
@@ -8,7 +8,45 @@ import { orchestrator, projectGenerationCalls } from "../orchestrator.js";
 import { broadcast } from "../sse.js";
 import { MAX_CALLS_PER_PROJECT } from "../config.js";
 
+const BGM_EXTS = ["mp3", "m4a", "wav"] as const;
+function bgmPath(projectId: string, ext: string) { return path.join(dataRoot, "projects", projectId, `bgm.${ext}`); }
+function findBgmExt(projectId: string): string | null {
+  for (const e of BGM_EXTS) if (existsSync(bgmPath(projectId, e))) return e;
+  return null;
+}
+
 export async function projectRoutes(app: FastifyInstance) {
+  /** BGM 上传（M5c）：raw octet-stream ≤20MB，mp3/m4a/wav；同名旧格式会被清掉，只保留一份 */
+  app.post("/api/projects/:id/bgm", { bodyLimit: 21 * 1024 * 1024 }, async (req, reply) => {
+    const { id } = req.params as any;
+    const q = (req.query ?? {}) as { ext?: string };
+    const ext = String(q.ext ?? "mp3").toLowerCase();
+    if (!BGM_EXTS.includes(ext as any)) return reply.code(400).send({ error: "仅支持 mp3 / m4a / wav" });
+    const buf = req.body as Buffer;
+    if (!Buffer.isBuffer(buf) || buf.length === 0) return reply.code(400).send({ error: "空文件（请以 application/octet-stream 直传音频二进制）" });
+    if (buf.length > 20 * 1024 * 1024) return reply.code(400).send({ error: "BGM 不能超过 20MB" });
+    mkdirSync(path.join(dataRoot, "projects", id), { recursive: true });
+    for (const e of BGM_EXTS) rmSync(bgmPath(id, e), { force: true });
+    writeFileSync(bgmPath(id, ext), buf);
+    broadcast({ type: "bgm_changed", ext }, id);
+    return { ok: true, ext };
+  });
+
+  /** 查询当前 BGM */
+  app.get("/api/projects/:id/bgm", async (req) => {
+    const { id } = req.params as any;
+    const ext = findBgmExt(id);
+    return { ext, url: ext ? `/files/projects/${id}/bgm.${ext}` : null };
+  });
+
+  /** 清除 BGM */
+  app.delete("/api/projects/:id/bgm", async (req) => {
+    const { id } = req.params as any;
+    for (const e of BGM_EXTS) rmSync(bgmPath(id, e), { force: true });
+    broadcast({ type: "bgm_changed", ext: null }, id);
+    return { ok: true };
+  });
+
   app.post("/api/projects", async (req) => {
     const { title, ratio } = createProjectSchema.parse(req.body);
     const id = newId();

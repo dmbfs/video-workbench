@@ -17,6 +17,9 @@ import { sessionUser, readSessionCookie } from "./auth.js";
 
 const app = Fastify({ logger: false, bodyLimit: 32 * 1024 * 1024 });
 
+// BGM 上传（M5c）走 application/octet-stream 原始二进制，默认解析器不认识会 415
+app.addContentTypeParser("application/octet-stream", { parseAs: "buffer" }, (_req, body, done) => done(null, body));
+
 await app.register(cors, { origin: "http://localhost:5173" });
 
 // 参数校验失败 → 400 + 首条原因（fastify 默认会把 throw 变 500）

@@ -37,10 +37,15 @@ export const api = {
   delSegment: (sid: string) => fetch(`/api/segments/${sid}`, { method: "DELETE" }).then(j),
   generateSegment: (sid: string) => fetch(`/api/segments/${sid}/generate`, { method: "POST" }).then(j),
   generateAll: (pid: string) => fetch(`/api/projects/${pid}/generate-all`, { method: "POST" }).then(j),
-  export: (pid: string, crossfadeMs = 0, postfx: "none" | "film" | "clean" = "none") =>
-    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs, postfx }) }).then(j),
+  export: (pid: string, crossfadeMs = 0, postfx: "none" | "film" | "clean" = "none", subtitle = true) =>
+    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs, postfx, subtitle }) }).then(j),
   auto: (body: { prompt: string; ratio?: "16:9" | "9:16"; postfx?: "none" | "film" | "clean"; crossfadeMs?: number }) =>
     fetch(`/api/projects/auto`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j),
+  getBgm: (pid: string): Promise<{ ext: string | null; url: string | null }> => fetch(`/api/projects/${pid}/bgm`).then(j),
+  uploadBgm: (pid: string, file: File) =>
+    fetch(`/api/projects/${pid}/bgm?ext=${encodeURIComponent(file.name.split(".").pop()?.toLowerCase() ?? "mp3")}`,
+      { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file }).then(j),
+  clearBgm: (pid: string) => fetch(`/api/projects/${pid}/bgm`, { method: "DELETE" }).then(j),
   settings: (): Promise<PublicSettings> => fetch("/api/settings").then(j),
   saveSettings: (s: unknown) =>
     fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) }).then(j),

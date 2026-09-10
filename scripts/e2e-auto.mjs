@@ -25,7 +25,19 @@ const injected = {
   chatDefaultId: "e2e-auto-chat",
   videoDefaultId: "e2e-auto-video",
 };
-const restore = async () => { try { await apply(orig); } catch {} };
+const restore = async () => {
+  try {
+    const r = await apply(orig);
+    if (!r.ok) throw new Error(`恢复 PUT ${r.status} ${JSON.stringify(await r.json().catch(() => {})).slice(0, 120)}`);
+    const after = await (await afetch(`${API}/api/settings`)).json();
+    const missing = (orig.providers ?? []).some((p) => !after.providers?.some((q) => q.id === p.id));
+    if (missing) throw new Error("恢复后 provider 列表与原始不一致");
+    return true;
+  } catch (e) {
+    console.log(`❌❌ 设置恢复失败：${e.message}——请立即检查 /api/settings，真实 provider 可能丢失！`);
+    return false;
+  }
+};
 const applied = await apply(injected);
 const after = await (await afetch(`${API}/api/settings`)).json();
 const vDef = after.providers?.find((p) => p.id === after.videoDefaultId);
@@ -108,8 +120,41 @@ const list = Array.isArray(msgs.body) ? msgs.body : msgs.body.messages ?? [];
 const narrationLog = list.some((m) => m.role === "assistant" && m.content.includes("旁白"));
 check("聊天面板有旁白里程碑消息", narrationLog);
 
-// 5) 清理（用后即删 + 恢复设置）
+// 6) 字幕烧录（M5b）：旁白清单应带词级 cues
+check("旁白带词级时间轴（cues）", manifest?.segments?.every((s) => Array.isArray(s.cues) && s.cues.length > 0) ?? false,
+  manifest?.segments?.map((s) => s.cues?.length + "词").join(" / ") ?? "");
+const assPath = `data/projects/${pid}/final.ass`;
+check("ASS 字幕文件生成", existsSync(assPath), existsSync(assPath) ? readFileSync(assPath, "utf8").split("\n").filter((l) => l.startsWith("Dialogue")).length + " 条 Dialogue" : "缺失");
+
+// 7) BGM（M5c）：纯 JS 生成 3s 正弦 wav 上传 → 二次导出 → 断言音轨仍在、时长不变
+const sampleRate = 8000, secs = 3;
+const dataLen = sampleRate * secs * 2;
+const samples = Buffer.alloc(dataLen);
+for (let i = 0; i < sampleRate * secs; i++) samples.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 6000), i * 2);
+const hdr = Buffer.alloc(44);
+hdr.write("RIFF", 0); hdr.writeUInt32LE(36 + dataLen, 4); hdr.write("WAVE", 8);
+hdr.write("fmt ", 12); hdr.writeUInt32LE(16, 16); hdr.writeUInt16LE(1, 20); hdr.writeUInt16LE(1, 22);
+hdr.writeUInt32LE(sampleRate, 24); hdr.writeUInt32LE(sampleRate * 2, 28); hdr.writeUInt16LE(2, 32); hdr.writeUInt16LE(16, 34);
+hdr.write("data", 36); hdr.writeUInt32LE(dataLen, 40);
+const wav = Buffer.concat([hdr, samples]);
+const up = await j(await afetch(`${API}/api/projects/${pid}/bgm?ext=wav`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: wav }));
+check("BGM 上传（wav 3s）", up.status === 200 && up.body.ext === "wav", JSON.stringify(up.body).slice(0, 80));
+const bgmInfo = await j(await afetch(`${API}/api/projects/${pid}/bgm`));
+check("BGM 查询回读", bgmInfo.body.ext === "wav" && !!bgmInfo.body.url);
+
+const reExport = await j(await afetch(`${API}/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postfx: "clean", subtitle: true }) }));
+check("带 BGM 二次导出成功", reExport.status === 200 && !!reExport.body.url, JSON.stringify(reExport.body).slice(0, 100));
+if (existsSync(finalPath)) {
+  const dur2 = Number(execFileSync(ffprobe, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", finalPath]).toString().trim());
+  check("带 BGM 成片时长仍 ≈30s", dur2 > 28 && dur2 < 33, `${dur2.toFixed(1)}s`);
+  const streams = execFileSync(ffprobe, ["-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", finalPath]).toString().trim();
+  check("成片含视频+音频双流", streams.includes("video") && streams.includes("audio"), streams);
+}
+
+// 5) 清理（用后即删 + 恢复设置；恢复失败视为测试失败）
 await afetch(`${API}/api/projects/${pid}`, { method: "DELETE" });
-await restore();
+const restored = await restore();
+if (!restored) { check("设置恢复到原始状态", false); process.exit(2); }
+check("设置恢复到原始状态", true);
 console.log(`\ndone ${pass} pass / ${fail} fail`);
 process.exit(fail ? 1 : 0);

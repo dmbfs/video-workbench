@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Blend, Loader2, RefreshCw, Scissors, Trash2 } from "lucide-react";
 import { api, subscribeEvents } from "@/lib/api";
 import type { Segment, SegmentStatus, StoryboardProposal } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const STATUS_TEXT: Record<SegmentStatus, string> = {
 export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [title, setTitle] = useState("");
+  const [ratio, setRatio] = useState<"16:9" | "9:16">("16:9");
   const [prompt, setPrompt] = useState("");
   const [dur, setDur] = useState("10");
   const [generating, setGenerating] = useState(false);
@@ -29,11 +30,14 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [proposal, setProposal] = useState<StoryboardProposal | null>(null);
   const [proposing, setProposing] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
   const ref = useRef(projectId);
 
   const load = useCallback(() => {
     api.getProject(ref.current).then((d) => {
       setTitle(d.project.title);
+      setRatio(d.project.ratio as "16:9" | "9:16");
       setSegments(d.segments);
       setGenerating((g) => g && d.segments.some((s) => s.status === "generating" || s.status === "pending"));
     });
@@ -72,6 +76,23 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   };
   const generateAll = async () => { setGenerating(true); await api.generateAll(ref.current); };
   const regenerate = async (sid: string) => { await api.generateSegment(sid); setGenerating(true); };
+  const saveEdit = async (sid: string) => {
+    const t = editText.trim();
+    setEditingId(null);
+    if (!t) return;
+    await api.patchSegment(sid, { prompt: t }); load();
+  };
+  const move = async (sid: string, dir: -1 | 1) => {
+    const ids = segments.map((s) => s.id);
+    const i = ids.indexOf(sid);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    await api.reorderSegments(ref.current, ids); load();
+  };
+  const toggleTransition = async (s: Segment) => {
+    await api.patchSegment(s.id, { transitionOut: s.transitionOut === "fade" ? "cut" : "fade" }); load();
+  };
   const allDone = segments.length > 0 && segments.every((s) => s.status === "succeeded");
   useEffect(() => { if (allDone) setGenerating(false); }, [allDone]); // 修复：全部完成后复位按钮态
   const totalDur = segments.reduce((a, s) => a + s.duration, 0);
@@ -90,7 +111,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
       <header className="rise-in">
         <h1 className="font-display text-xl font-semibold">{title || "未命名项目"}</h1>
         <p className="text-sm text-muted-foreground font-mono">
-          {segments.length} 段 · 共 {totalDur}s · 16:9
+          {segments.length} 段 · 共 {totalDur}s · {ratio}
         </p>
       </header>
 
@@ -130,13 +151,33 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
               </span>
               <span className="text-xs font-mono text-muted-foreground">{s.duration}s</span>
             </div>
-            <p className="text-sm leading-snug line-clamp-2 min-h-10">{s.prompt}</p>
+            {editingId === s.id ? (
+              <Input autoFocus value={editText} onChange={(e) => setEditText(e.target.value)}
+                onBlur={() => saveEdit(s.id)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(s.id); if (e.key === "Escape") setEditingId(null); }}
+                className="h-8 text-sm bg-background" />
+            ) : (
+              <p className="text-sm leading-snug line-clamp-2 min-h-10 cursor-text hover:text-foreground" title="点击编辑提示词"
+                onClick={() => { setEditingId(s.id); setEditText(s.prompt); }}>{s.prompt}</p>
+            )}
             {s.status === "succeeded" && (
               <video src={`/files/projects/${projectId}/segments/${s.id}.mp4`} muted preload="metadata"
                 className="w-full rounded-lg border border-border" />
             )}
             {s.status === "failed" && s.error && <p className="text-xs text-[#F87171] line-clamp-2">{s.error}</p>}
             <div className="flex items-center justify-end gap-1">
+              <Button variant="ghost" size="icon" title="前移" disabled={i === 0} onClick={() => move(s.id, -1)}>
+                <ArrowLeft className="size-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" title="后移" disabled={i === segments.length - 1} onClick={() => move(s.id, 1)}>
+                <ArrowRight className="size-3.5" />
+              </Button>
+              {i < segments.length - 1 && (
+                <Button variant="ghost" size="icon" title={s.transitionOut === "fade" ? "转场：叠化 0.5s（点我改硬切）" : "转场：硬切（点我改叠化）"}
+                  onClick={() => toggleTransition(s)}>
+                  {s.transitionOut === "fade" ? <Blend className="size-3.5 text-primary" /> : <Scissors className="size-3.5" />}
+                </Button>
+              )}
               <Button variant="ghost" size="icon" title="重出这段" onClick={() => regenerate(s.id)}>
                 <RefreshCw className="size-3.5" />
               </Button>
@@ -193,7 +234,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>拼接前确认</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground py-2">
-            这一步会把 {segments.filter((s) => s.status === "succeeded").length} 段拼成一条片，确认都满意再拼——不满意的段单独重出就行。
+            这一步会把 {segments.filter((s) => s.status === "succeeded").length} 段拼成一条片，转场按每段的标记执行（剪刀=硬切，波浪=叠化 0.5s）——不满意的段单独重出就行。
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>再改改</Button>

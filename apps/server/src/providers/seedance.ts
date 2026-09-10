@@ -6,7 +6,7 @@ import { friendlyUpstreamError } from "./upstream-error.js";
 export class SeedanceProvider implements VideoProvider {
   kind = "seedance";
   constructor(private cfg: ProviderConfig) {}
-  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true }; }
+  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true, maxResolution: "1080p" }; }
 
   async createTask(req: CreateTaskReq, _ctx: CreateTaskCtx) {
     const content: object[] = [{ type: "text", text: req.prompt }];
@@ -16,7 +16,7 @@ export class SeedanceProvider implements VideoProvider {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.cfg.apiKey}` },
       body: JSON.stringify({
         model: this.cfg.modelId, content,
-        resolution: "720p", aspect_ratio: req.ratio,
+        resolution: req.resolution ?? "720p", aspect_ratio: req.ratio,
         duration: req.duration, with_audio: req.withAudio,
       }),
     });

@@ -16,7 +16,7 @@ export class TokenDanceSeedanceProvider implements VideoProvider {
   kind = "tokendance-seedance";
   constructor(private cfg: ProviderConfig) {}
 
-  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true }; }
+  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true, maxResolution: "1080p" }; }
 
   private get base() {
     return (this.cfg.baseUrl || "https://tokendance.space/gateway/ark").replace(/\/+$/, "");
@@ -34,7 +34,7 @@ export class TokenDanceSeedanceProvider implements VideoProvider {
     return JSON.stringify({
       model: this.cfg.modelId,
       content,
-      resolution: "720p",
+      resolution: req.resolution ?? "720p",
       // 首帧任务画幅由素材决定，必须 adaptive；纯文生视频必须给明确画幅
       ratio: req.firstFrameB64 ? "adaptive" : req.ratio,
       duration: req.duration,

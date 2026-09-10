@@ -12,7 +12,8 @@ export class OpenAIVideoProvider implements VideoProvider {
   kind = "openai-video";
   constructor(private cfg: ProviderConfig) {}
 
-  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true }; }
+  // size 契约只有 720x1280 / 1280x720 / 1024x1792 / 1792x1024，无 16:9 1080p 档
+  capabilities(): Caps { return { maxSegmentDuration: 30, imageToVideo: true, audio: true, maxResolution: "720p" }; }
 
   private body(req: CreateTaskReq, withImage: boolean) {
     return JSON.stringify({

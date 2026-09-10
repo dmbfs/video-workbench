@@ -6,7 +6,8 @@ import { friendlyUpstreamError } from "./upstream-error.js";
 export class MiniMaxProvider implements VideoProvider {
   kind = "minimax";
   constructor(private cfg: ProviderConfig) {}
-  capabilities(): Caps { return { maxSegmentDuration: 15, imageToVideo: true, audio: true }; }
+  // H3 480P/768P、H3-Max 768P/2K，均无 1080p 档；不主动传 resolution，沿用 API 默认 768P（≥720p 类）
+  capabilities(): Caps { return { maxSegmentDuration: 15, imageToVideo: true, audio: true, maxResolution: "720p" }; }
 
   async createTask(req: CreateTaskReq, _ctx: CreateTaskCtx) {
     const content: object[] = [{ type: "text", text: req.prompt }];

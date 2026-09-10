@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "pnpm -r --parallel dev",
     "e2e": "node scripts/e2e.mjs",
     "e2e-m2": "node scripts/e2e-m2.mjs",
     "e2e-m2b": "node scripts/e2e-m2b.mjs",

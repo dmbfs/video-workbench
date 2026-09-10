@@ -24,7 +24,12 @@ export async function storyboardRoutes(app: FastifyInstance) {
 
     for (let attempt = 0; attempt < 2; attempt++) {
       let raw = "";
-      for await (const d of provider.stream(messages, { json: attempt === 0 })) raw += d;
+      try {
+        for await (const d of provider.stream(messages, { json: attempt === 0 })) raw += d;
+      } catch (e) {
+        // 上游错误（如 key 失效）直接以可读信息抛给前端，不做 JSON 重试
+        throw Object.assign(new Error((e as Error).message || "对话模型调用失败"), { statusCode: 400 });
+      }
       raw = raw.replace(/```json|```/g, "").trim();
       const start = raw.indexOf("{");
       const end = raw.lastIndexOf("}");

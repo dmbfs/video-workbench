@@ -46,7 +46,11 @@ export async function chatRoutes(app: FastifyInstance) {
         .run(mid, id, "assistant", full, new Date().toISOString());
       reply.raw.write(`data: ${JSON.stringify({ type: "chat_done", messageId: mid })}\n\n`);
     } catch (e) {
-      reply.raw.write(`data: ${JSON.stringify({ type: "chat_delta", text: `\n\n[出错了：${(e as Error).message.slice(0, 120)}]` })}\n\n`);
+      const msg = (e as Error).message?.slice(0, 200) || "未知错误";
+      // 错误也要落库为 assistant 消息：否则前端重拉历史后气泡消失，看起来像「没有回应」
+      db.prepare("INSERT INTO chat_messages(id,project_id,role,content,created_at) VALUES(?,?,?,?,?)")
+        .run(newId(), id, "assistant", `⚠️ ${msg}`, new Date().toISOString());
+      reply.raw.write(`data: ${JSON.stringify({ type: "chat_delta", text: `\n\n⚠️ ${msg}` })}\n\n`);
       reply.raw.write(`data: ${JSON.stringify({ type: "chat_done", messageId: "" })}\n\n`);
     }
     reply.raw.end(); // hijack 后必须手动收尾，否则客户端 Body 超时

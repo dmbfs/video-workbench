@@ -1,5 +1,6 @@
 import type { VideoProvider, CreateTaskReq, CreateTaskCtx, PollResult, Caps } from "./types.js";
 import type { ProviderConfig } from "@vidstitch/shared";
+import { friendlyUpstreamError } from "./upstream-error.js";
 
 /** MiniMax H3/H3-Max：api.minimax.io /v2/video_generation 创建 + /v2/query/{task_id} 轮询（RESEARCH.md §1） */
 export class MiniMaxProvider implements VideoProvider {
@@ -15,7 +16,11 @@ export class MiniMaxProvider implements VideoProvider {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.cfg.apiKey}` },
       body: JSON.stringify({ model: this.cfg.modelId, content, duration: req.duration }),
     });
-    if (!r.ok) throw new Error(`minimax create ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const bodyText = await r.text().catch(() => "");
+      console.error(`[minimax] create ${r.status} ${bodyText.slice(0, 300)}`);
+      throw friendlyUpstreamError(r.status, bodyText);
+    }
     const j = (await r.json()) as { task_id: string };
     return { taskId: j.task_id };
   }

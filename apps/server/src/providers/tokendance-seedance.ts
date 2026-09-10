@@ -1,5 +1,6 @@
 import type { VideoProvider, CreateTaskReq, CreateTaskCtx, PollResult, Caps } from "./types.js";
 import type { ProviderConfig } from "@vidstitch/shared";
+import { friendlyUpstreamError } from "./upstream-error.js";
 
 /**
  * TokenDance Seedance Generations 原生协议（网关，非火山 Ark 直连）：
@@ -47,7 +48,11 @@ export class TokenDanceSeedanceProvider implements VideoProvider {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.cfg.apiKey}` },
       body: this.body(req),
     });
-    if (!r.ok) throw new Error(`tokendance-seedance create ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const bodyText = await r.text().catch(() => "");
+      console.error(`[tokendance-seedance] create ${r.status} ${bodyText.slice(0, 300)}`);
+      throw friendlyUpstreamError(r.status, bodyText);
+    }
     const j = (await r.json()) as { id?: string };
     if (!j.id) throw new Error("tokendance-seedance create: response missing task id");
     return { taskId: j.id };

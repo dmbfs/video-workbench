@@ -1,5 +1,6 @@
 import type { VideoProvider, CreateTaskReq, CreateTaskCtx, PollResult, Caps } from "./types.js";
 import type { ProviderConfig } from "@vidstitch/shared";
+import { friendlyUpstreamError } from "./upstream-error.js";
 
 /**
  * OpenAI 兼容异步视频契约（LLMGateway / OpenAI Sora 同形）：
@@ -32,7 +33,11 @@ export class OpenAIVideoProvider implements VideoProvider {
     if (!r.ok && r.status === 400 && req.firstFrameB64) {
       r = await fetch(url, { method: "POST", headers, body: this.body(req, false) });
     }
-    if (!r.ok) throw new Error(`openai-video create ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const bodyText = await r.text().catch(() => "");
+      console.error(`[openai-video] create ${r.status} ${bodyText.slice(0, 300)}`);
+      throw friendlyUpstreamError(r.status, bodyText);
+    }
     const j = (await r.json()) as { id?: string; task_id?: string };
     const taskId = j.id ?? j.task_id;
     if (!taskId) throw new Error("openai-video create: response missing task id");

@@ -1,5 +1,6 @@
 import type { VideoProvider, CreateTaskReq, CreateTaskCtx, PollResult, Caps } from "./types.js";
 import type { ProviderConfig } from "@vidstitch/shared";
+import { friendlyUpstreamError } from "./upstream-error.js";
 
 /** Seedance（BytePlus/火山 Ark）：POST /api/v3/contents/generations/tasks + GET 轮询（RESEARCH.md §1） */
 export class SeedanceProvider implements VideoProvider {
@@ -19,7 +20,11 @@ export class SeedanceProvider implements VideoProvider {
         duration: req.duration, with_audio: req.withAudio,
       }),
     });
-    if (!r.ok) throw new Error(`seedance create ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const bodyText = await r.text().catch(() => "");
+      console.error(`[seedance] create ${r.status} ${bodyText.slice(0, 300)}`);
+      throw friendlyUpstreamError(r.status, bodyText);
+    }
     const j = (await r.json()) as { id: string };
     return { taskId: j.id };
   }

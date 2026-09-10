@@ -1,5 +1,6 @@
 import type { ChatProvider, ChatMsg } from "./chat-types.js";
 import type { ProviderConfig } from "@vidstitch/shared";
+import { friendlyUpstreamError } from "./upstream-error.js";
 
 /** OpenAI 兼容 /chat/completions 流式（SSE 行解析，容忍 keep-alive 脏行） */
 export class OpenAIChatProvider implements ChatProvider {
@@ -15,7 +16,11 @@ export class OpenAIChatProvider implements ChatProvider {
         ...(opts?.json ? { response_format: { type: "json_object" } } : {}),
       }),
     });
-    if (!r.ok || !r.body) throw new Error(`chat ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    if (!r.ok || !r.body) {
+      const bodyText = await r.text().catch(() => "");
+      console.error(`[chat-openai] ${this.cfg.modelId} ${r.status} ${bodyText.slice(0, 300)}`);
+      throw friendlyUpstreamError(r.status, bodyText);
+    }
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = "";

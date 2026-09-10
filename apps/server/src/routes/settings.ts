@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { getSettings, saveSettings, toPublic, SettingsValidationError } from "../settings.js";
+import { friendlyUpstreamError } from "../providers/upstream-error.js";
 import { updateSettingsSchema } from "@vidstitch/shared";
 
 export async function settingsRoutes(app: FastifyInstance) {
@@ -25,7 +26,8 @@ export async function settingsRoutes(app: FastifyInstance) {
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.apiKey}` },
           body: JSON.stringify({ model: p.modelId, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
         });
-        return { ok: r.ok, status: r.status };
+        const bodyText = r.ok ? "" : await r.text().catch(() => "");
+        return { ok: r.ok, status: r.status, error: r.ok ? undefined : friendlyUpstreamError(r.status, bodyText).message };
       } catch (e) {
         return { ok: false, error: (e as Error).message.slice(0, 200) };
       }
@@ -33,7 +35,8 @@ export async function settingsRoutes(app: FastifyInstance) {
     if (p.kind === "openai-video") {
       try {
         const r = await fetch(`${p.baseUrl}/models`, { headers: { Authorization: `Bearer ${p.apiKey}` } });
-        return { ok: r.ok, status: r.status };
+        const bodyText = r.ok ? "" : await r.text().catch(() => "");
+        return { ok: r.ok, status: r.status, error: r.ok ? undefined : friendlyUpstreamError(r.status, bodyText).message };
       } catch (e) {
         return { ok: false, error: (e as Error).message.slice(0, 200) };
       }
@@ -46,7 +49,10 @@ export async function settingsRoutes(app: FastifyInstance) {
           fetch(`${origin}/portal/api/v1/user/balance`, { headers: { Authorization: `Bearer ${p.apiKey}` } }),
           fetch(`${origin}/gateway/v1/models`),
         ]);
-        if (!bal.ok) return { ok: false, status: bal.status };
+        if (!bal.ok) {
+          const bodyText = await bal.text().catch(() => "");
+          return { ok: false, status: bal.status, error: friendlyUpstreamError(bal.status, bodyText).message };
+        }
         const models = (await cat.json()) as { data?: { id?: string }[] };
         const found = (models.data ?? []).some((m) => m.id === p.modelId);
         return found ? { ok: true, status: bal.status } : { ok: false, error: `模型 ${p.modelId} 不在实时目录中` };

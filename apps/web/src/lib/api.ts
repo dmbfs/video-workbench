@@ -32,11 +32,13 @@ export const api = {
     fetch(`/api/projects/${pid}/segments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(j),
   patchSegment: (sid: string, b: object) =>
     fetch(`/api/segments/${sid}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(j),
+  reorderSegments: (pid: string, order: string[]) =>
+    fetch(`/api/projects/${pid}/segments/order`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) }).then(j),
   delSegment: (sid: string) => fetch(`/api/segments/${sid}`, { method: "DELETE" }).then(j),
   generateSegment: (sid: string) => fetch(`/api/segments/${sid}/generate`, { method: "POST" }).then(j),
   generateAll: (pid: string) => fetch(`/api/projects/${pid}/generate-all`, { method: "POST" }).then(j),
-  export: (pid: string) =>
-    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(j),
+  export: (pid: string, crossfadeMs = 0) =>
+    fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs }) }).then(j),
   settings: (): Promise<PublicSettings> => fetch("/api/settings").then(j),
   saveSettings: (s: unknown) =>
     fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) }).then(j),

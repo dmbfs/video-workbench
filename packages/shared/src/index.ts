@@ -69,6 +69,8 @@ export const patchSegmentSchema = z.object({
 });
 export const exportSchema = z.object({ crossfadeMs: z.number().int().min(0).max(2000).default(0) });
 export const updateSettingsSchema = settingsSchema;
+/** 段序调整：order 为全部分镜 id 的新顺序 */
+export const reorderSegmentsSchema = z.object({ order: z.array(z.string()).min(1) });
 
 export const chatRoleSchema = z.enum(["user", "assistant", "system"]);
 export const chatMessageSchema = z.object({

@@ -7,6 +7,9 @@ import { broadcast } from "./sse.js";
 import { POLL_INTERVAL_MS, POLL_TIMEOUT_MS, MAX_CALLS_PER_PROJECT, BREAKER_FAILURE_THRESHOLD } from "./config.js";
 import type { ProviderConfig, Segment, SegmentStatus } from "@vidstitch/shared";
 
+/** 视频类 provider kind（与 settings.ts 的 VIDEO_KINDS 保持一致） */
+const VIDEO_KINDS = new Set(["minimax", "seedance", "tokendance-seedance", "openai-video"]);
+
 /** 不该重试的失败：重试会重复创建付费任务，或永远等不到结果 */
 class NonRetryableError extends Error {}
 
@@ -89,9 +92,11 @@ class Orchestrator {
       | undefined;
 
     const settings = getSettings();
+    // 兜底链：段上指定 → 全局默认 → 任一真实视频 provider → mock（默认 id 失效时不再直接躺平）
     const cfg: ProviderConfig | undefined =
       settings.providers.find((p) => p.id === s.provider) ??
       settings.providers.find((p) => p.id === settings.videoDefaultId) ??
+      settings.providers.find((p) => p.kind !== "mock" && VIDEO_KINDS.has(p.kind)) ??
       settings.providers.find((p) => p.kind === "mock");
     if (!cfg) return this.setStatus(segmentId, { status: "failed", error: "没有可用的视频 provider，请到设置页添加" });
 

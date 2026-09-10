@@ -1,13 +1,18 @@
 import type { FastifyInstance } from "fastify";
-import { getSettings, saveSettings, toPublic } from "../settings.js";
+import { getSettings, saveSettings, toPublic, SettingsValidationError } from "../settings.js";
 import { updateSettingsSchema } from "@vidstitch/shared";
 
 export async function settingsRoutes(app: FastifyInstance) {
   app.get("/api/settings", async () => toPublic(getSettings()));
 
-  app.put("/api/settings", async (req) => {
-    const s = saveSettings(updateSettingsSchema.parse(req.body));
-    return toPublic(s);
+  app.put("/api/settings", async (req, reply) => {
+    try {
+      const s = saveSettings(updateSettingsSchema.parse(req.body));
+      return toPublic(s);
+    } catch (e) {
+      if (e instanceof SettingsValidationError) return reply.code(400).send({ error: e.message });
+      throw e;
+    }
   });
 
   app.post("/api/providers/:id/test", async (req) => {

@@ -85,6 +85,7 @@ try {
   console.log(`E2E-M2b PASS · final=${dur.toFixed(1)}s · 截图 screenshots/m2b-0*.png`);
 } finally {
   await browser.close();
+  if (pid) await afetch(`${API}/api/projects/${pid}`, { method: "DELETE" }); // 清理测试项目（M2b验收）
   await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origDefault, videoDefaultId: origVideoDefault }) });
   console.log("[restore] 设置已还原");

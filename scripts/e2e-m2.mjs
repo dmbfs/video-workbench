@@ -93,6 +93,7 @@ try {
   passed = true;
 } finally {
   await browser.close();
+  if (pid) await afetch(`${API}/api/projects/${pid}`, { method: "DELETE" }); // 清理测试项目（M2对话验收）
   await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origDefault, videoDefaultId: origVideoDefault }) });
   console.log(`[restore] chat/video default -> ${origDefault} / ${origVideoDefault}${injected ? "（临时 mock 一并移除）" : ""}`);

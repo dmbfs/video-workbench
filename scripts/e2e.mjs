@@ -40,6 +40,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.context().addCookies([{ name: auth.name, value: auth.value, url: BASE }]);
 
+let pid; // 结束后清理项目，不污染用户项目列表
 try {
   await page.goto(BASE + "/app");
   await page.waitForSelector("text=vidstitch");
@@ -85,7 +86,7 @@ try {
   await page.screenshot({ path: "screenshots/m1-04-final.png" });
 
   // 6. ffprobe 断言成片时长 28–32s
-  const pid = (await (await afetch(`${API}/api/projects`)).json())
+  pid = (await (await afetch(`${API}/api/projects`)).json())
     .find((p) => p.title === "日落宣传测试").id;
   const out = execFileSync(ffprobe, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
     `data/projects/${pid}/final.mp4`]).toString().trim();
@@ -97,4 +98,5 @@ try {
   await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origChatDefault, videoDefaultId: origVideoDefault }) });
   console.log(`[restore] chat/video default -> ${origChatDefault} / ${origVideoDefault}`);
+  if (pid) await afetch(`${API}/api/projects/${pid}`, { method: "DELETE" }); // 清理测试项目
 }

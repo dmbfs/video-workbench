@@ -61,4 +61,5 @@ try {
   process.exitCode = 1;
 } finally {
   await browser.close();
+  if (proj?.id) await afetch(`${API}/api/projects/${proj.id}`, { method: "DELETE" }); // 清理测试项目
 }

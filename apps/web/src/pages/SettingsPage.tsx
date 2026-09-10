@@ -52,8 +52,8 @@ export function SettingsPage() {
     setTestState((s) => ({ ...s, [d.id]: "…" }));
     try {
       await api.saveSettings(payload());
-      const r = (await api.testProvider(d.id)) as { ok: boolean; error?: string; status?: number };
-      setTestState((s) => ({ ...s, [d.id]: r.ok ? "通了" : `不行：${r.error ?? r.status}` }));
+      const r = (await api.testProvider(d.id)) as { ok: boolean; error?: string; status?: number; note?: string };
+      setTestState((s) => ({ ...s, [d.id]: r.ok ? (r.note ? `通了（${r.note}）` : "通了") : `不行：${r.error ?? r.status}` }));
     } catch (e) {
       setTestState((s) => ({ ...s, [d.id]: `不行：${(e as Error).message.slice(0, 80)}` }));
     }

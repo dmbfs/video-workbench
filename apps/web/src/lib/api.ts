@@ -1,11 +1,27 @@
-import type { ProjectSummary, PublicSettings, SseEvent, Segment, Storyboard } from "@vidstitch/shared";
+import type { ProjectSummary, PublicSettings, SseEvent, Segment, Storyboard, PublicUser } from "@vidstitch/shared";
 
 const j = async (r: Response) => {
-  if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+  if (!r.ok) {
+    let msg = await r.text().catch(() => "");
+    try { msg = JSON.parse(msg).error ?? msg; } catch { /* 保留原文 */ }
+    const err = new Error(msg.slice(0, 200) || `HTTP ${r.status}`) as Error & { status?: number };
+    err.status = r.status;
+    throw err;
+  }
   return r.json();
 };
 
+const post = (url: string, body?: unknown) =>
+  fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+
 export const api = {
+  // ── 账号 ──
+  me: (): Promise<{ user: PublicUser }> => fetch("/api/auth/me").then(j),
+  register: (b: { account: string; password: string; nickname?: string }): Promise<{ user: PublicUser }> =>
+    post("/api/auth/register", b).then(j),
+  login: (b: { account: string; password: string }): Promise<{ user: PublicUser }> => post("/api/auth/login", b).then(j),
+  logout: (): Promise<{ ok: boolean }> => post("/api/auth/logout").then(j),
+  // ── 项目 ──
   listProjects: (): Promise<ProjectSummary[]> => fetch("/api/projects").then(j),
   createProject: (b: { title: string; ratio: "16:9" | "9:16" }) =>
     fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then(j),

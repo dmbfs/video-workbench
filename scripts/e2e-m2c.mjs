@@ -1,29 +1,34 @@
 // M2c 落地页重设计自检：五层背景 + Hero 7:5 + Bento 微 UI + 成本算盘弹窗 → screenshots/m2c-*.png
 import { chromium } from "playwright";
+import { registerOrLogin } from "./lib-auth.mjs";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const BASE = "http://localhost:5173";
 const API = "http://localhost:8787";
 
+const auth = await registerOrLogin(API);
+const afetch = (url, opts = {}) => fetch(url, { ...opts, headers: { ...(opts.headers ?? {}), cookie: auth.cookie } });
+
 // 清理 + 造数据：项目 + 2 段分镜（5s/3s，总 8s）
-for (const p of await (await fetch(`${API}/api/projects`)).json()) {
-  if (p.title === "M2c验收") await fetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
+for (const p of await (await afetch(`${API}/api/projects`)).json()) {
+  if (p.title === "M2c验收") await afetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
 }
-const proj = await (await fetch(`${API}/api/projects`, {
+const proj = await (await afetch(`${API}/api/projects`, {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ title: "M2c验收", ratio: "16:9" }),
 })).json();
-await fetch(`${API}/api/projects/${proj.id}/segments`, {
+await afetch(`${API}/api/projects/${proj.id}/segments`, {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt: "夕阳下的跨海大桥，车流延时", duration: 5 }),
 });
-await fetch(`${API}/api/projects/${proj.id}/segments`, {
+await afetch(`${API}/api/projects/${proj.id}/segments`, {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt: "霓虹夜航，赛博朋克城市", duration: 5 }),
 });
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.context().addCookies([{ name: auth.name, value: auth.value, url: BASE }]);
 try {
   // 1. 落地页整页（背景五层栈 + Hero 7:5 + Bento）
   await page.goto(BASE);

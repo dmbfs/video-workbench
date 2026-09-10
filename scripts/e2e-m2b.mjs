@@ -2,12 +2,16 @@
 import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 import { path as ffprobe } from "@ffprobe-installer/ffprobe";
+import { registerOrLogin } from "./lib-auth.mjs";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const BASE = "http://localhost:5173";
 const API = "http://localhost:8787";
 
-const settings = await (await fetch(`${API}/api/settings`)).json();
+const auth = await registerOrLogin(API);
+const afetch = (url, opts = {}) => fetch(url, { ...opts, headers: { ...(opts.headers ?? {}), cookie: auth.cookie } });
+
+const settings = await (await afetch(`${API}/api/settings`)).json();
 const origDefault = settings.chatDefaultId;
 const origVideoDefault = settings.videoDefaultId;
 let injected = null;
@@ -17,7 +21,7 @@ if (!settings.providers.some((p) => p.kind === "mock")) {
 }
 const e2eMock = settings.providers.find((p) => p.kind === "mock");
 if (origDefault !== e2eMock.id || origVideoDefault !== e2eMock.id) {
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: e2eMock.id, videoDefaultId: e2eMock.id }) });
   console.log(`[setup] chat/video default -> ${e2eMock.id}`);
 }
@@ -25,9 +29,10 @@ if (origDefault !== e2eMock.id || origVideoDefault !== e2eMock.id) {
 let pid;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.context().addCookies([{ name: auth.name, value: auth.value, url: BASE }]);
 try {
-  for (const p of await (await fetch(`${API}/api/projects`)).json()) {
-    if (p.title === "M2b验收") await fetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
+  for (const p of await (await afetch(`${API}/api/projects`)).json()) {
+    if (p.title === "M2b验收") await afetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
   }
   // 1. 首页
   await page.goto(BASE);
@@ -46,7 +51,7 @@ try {
   await page.getByLabel("标题").fill("M2b验收");
   await page.getByRole("button", { name: /^创建$/ }).click();
   await wait(800);
-  pid = (await (await fetch(`${API}/api/projects`)).json()).find((p) => p.title === "M2b验收").id;
+  pid = (await (await afetch(`${API}/api/projects`)).json()).find((p) => p.title === "M2b验收").id;
 
   await page.getByPlaceholder(/跟顾问说说你的想法/).fill("想要30秒城市日落宣传片");
   await page.getByRole("button", { name: "发送" }).click();
@@ -80,7 +85,7 @@ try {
   console.log(`E2E-M2b PASS · final=${dur.toFixed(1)}s · 截图 screenshots/m2b-0*.png`);
 } finally {
   await browser.close();
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origDefault, videoDefaultId: origVideoDefault }) });
   console.log("[restore] 设置已还原");
 }

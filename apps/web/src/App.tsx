@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Clapperboard, Plus } from "lucide-react";
+import { Clapperboard, Loader2, LogOut, Plus, UserRound } from "lucide-react";
 import { api } from "@/lib/api";
-import type { ProjectSummary } from "@vidstitch/shared";
+import type { ProjectSummary, PublicUser } from "@vidstitch/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkbenchPage } from "@/pages/WorkbenchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { AuthPage } from "@/pages/AuthPage";
 import LandingPage from "@/pages/LandingPage";
 
-function AppShell() {
+function AppShell({ user, onLogout }: { user: PublicUser; onLogout: () => void }) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -49,9 +50,16 @@ function AppShell() {
             </button>
           ))}
         </div>
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-border space-y-1">
           <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setCreating(true)}>
             <Plus className="size-4" /><span className="whitespace-nowrap">新建项目</span>
+          </Button>
+          <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground">
+            <UserRound className="size-4 shrink-0" />
+            <span className="whitespace-nowrap truncate flex-1">{user.nickname ?? user.account}</span>
+          </div>
+          <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground" onClick={onLogout}>
+            <LogOut className="size-4" /><span className="whitespace-nowrap">退出登录</span>
           </Button>
         </div>
       </aside>
@@ -102,12 +110,33 @@ function AppShell() {
 }
 
 export default function App() {
+  // undefined = 会话检查中；null = 未登录；PublicUser = 已登录
+  const [user, setUser] = useState<PublicUser | null | undefined>(undefined);
+
+  useEffect(() => {
+    api.me().then(({ user }) => setUser(user)).catch(() => setUser(null));
+  }, []);
+
+  const logout = async () => {
+    await api.logout().catch(() => {});
+    setUser(null);
+  };
+
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen grid place-items-center text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    );
+  }
+  if (!user) return <AuthPage onDone={setUser} />;
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/app" element={<AppShell />} />
-      <Route path="/settings" element={<AppShell />} />
-      <Route path="*" element={<AppShell />} />
+      <Route path="/app" element={<AppShell user={user} onLogout={logout} />} />
+      <Route path="/settings" element={<AppShell user={user} onLogout={logout} />} />
+      <Route path="*" element={<AppShell user={user} onLogout={logout} />} />
     </Routes>
   );
 }

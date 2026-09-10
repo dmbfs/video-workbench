@@ -3,13 +3,17 @@
 import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 import { path as ffprobe } from "@ffprobe-installer/ffprobe";
+import { registerOrLogin } from "./lib-auth.mjs";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const BASE = "http://localhost:5173";
 const API = "http://localhost:8787";
 
+const auth = await registerOrLogin(API);
+const afetch = (url, opts = {}) => fetch(url, { ...opts, headers: { ...(opts.headers ?? {}), cookie: auth.cookie } });
+
 // --- 确保存在 mock provider 并把 chat/video 默认都指向它（结束恢复原配置） ---
-const settings = await (await fetch(`${API}/api/settings`)).json();
+const settings = await (await afetch(`${API}/api/settings`)).json();
 const origDefault = settings.chatDefaultId;
 const origVideoDefault = settings.videoDefaultId;
 let injected = null;
@@ -19,7 +23,7 @@ if (!settings.providers.some((p) => p.kind === "mock")) {
 }
 const e2eMock = settings.providers.find((p) => p.kind === "mock");
 if (origDefault !== e2eMock.id || origVideoDefault !== e2eMock.id) {
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: e2eMock.id, videoDefaultId: e2eMock.id }) });
   console.log(`[setup] chat/video default -> ${e2eMock.id}（结束自动恢复）`);
 }
@@ -27,11 +31,12 @@ if (origDefault !== e2eMock.id || origVideoDefault !== e2eMock.id) {
 let pid; // 项目 id（try 内赋值，冒烟段复用）
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.context().addCookies([{ name: auth.name, value: auth.value, url: BASE }]);
 let passed = false;
 try {
   // 清理同标题历史项目，保证幂等
-  for (const p of await (await fetch(`${API}/api/projects`)).json()) {
-    if (p.title === "M2对话验收") await fetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
+  for (const p of await (await afetch(`${API}/api/projects`)).json()) {
+    if (p.title === "M2对话验收") await afetch(`${API}/api/projects/${p.id}`, { method: "DELETE" });
   }
 
   await page.goto(BASE + "/app");
@@ -43,7 +48,7 @@ try {
   await page.getByRole("button", { name: /^创建$/ }).click();
   await page.waitForSelector("text=M2对话验收");
   await wait(800);
-  pid = (await (await fetch(`${API}/api/projects`)).json()).find((p) => p.title === "M2对话验收").id;
+  pid = (await (await afetch(`${API}/api/projects`)).json()).find((p) => p.title === "M2对话验收").id;
 
   // 2. 对话：发一条 → 等助手回复（mock 流式）
   await page.getByPlaceholder(/跟顾问说说你的想法/).fill("想要30秒城市日落宣传片");
@@ -86,24 +91,24 @@ try {
   passed = true;
 } finally {
   await browser.close();
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origDefault, videoDefaultId: origVideoDefault }) });
   console.log(`[restore] chat/video default -> ${origDefault} / ${origVideoDefault}${injected ? "（临时 mock 一并移除）" : ""}`);
 }
 if (!passed) process.exit(1);
 
 // --- 真实模型冒烟（仅当存在已配 key 的 openai-compatible provider）---
-const fresh = await (await fetch(`${API}/api/settings`)).json();
+const fresh = await (await afetch(`${API}/api/settings`)).json();
 const realChat = fresh.providers.find((p) => p.kind === "openai-compatible" && p.apiKeySet);
 if (!realChat) {
   console.log("[smoke] 未发现已配 key 的真实对话模型，冒烟跳过");
 } else {
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...fresh, chatDefaultId: realChat.id }) });
   const t0 = Date.now();
-  const r = await fetch(`${API}/api/projects/${pid}/storyboard/propose`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const r = await afetch(`${API}/api/projects/${pid}/storyboard/propose`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   const j = await r.json();
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...fresh, chatDefaultId: origDefault }) });
   if (r.ok && j.storyboard?.segments?.length) {
     console.log(`[smoke] 真实模型 propose OK：${j.storyboard.segments.length} 段，${((Date.now() - t0) / 1000).toFixed(1)}s，模型=${realChat.modelId}`);

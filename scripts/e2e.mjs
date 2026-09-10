@@ -3,13 +3,17 @@
 import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 import { path as ffprobe } from "@ffprobe-installer/ffprobe";
+import { registerOrLogin } from "./lib-auth.mjs";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const BASE = "http://localhost:5173";
 const API = "http://localhost:8787";
 
+const auth = await registerOrLogin(API);
+const afetch = (url, opts = {}) => fetch(url, { ...opts, headers: { ...(opts.headers ?? {}), cookie: auth.cookie } });
+
 // 确保默认 chat/video 都指向 mock（结束恢复原配置）——否则会打真实模型并计费
-const settings = await (await fetch(`${API}/api/settings`)).json();
+const settings = await (await afetch(`${API}/api/settings`)).json();
 const origChatDefault = settings.chatDefaultId;
 const origVideoDefault = settings.videoDefaultId;
 if (!settings.providers.some((p) => p.kind === "mock")) {
@@ -17,7 +21,7 @@ if (!settings.providers.some((p) => p.kind === "mock")) {
 }
 const e2eMock = settings.providers.find((p) => p.kind === "mock");
 if (origChatDefault !== e2eMock.id || origVideoDefault !== e2eMock.id) {
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: e2eMock.id, videoDefaultId: e2eMock.id }) });
   console.log(`[setup] chat/video default -> ${e2eMock.id}（结束自动恢复）`);
 }
@@ -34,6 +38,7 @@ async function waitVideos(page, n, timeoutMs) {
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.context().addCookies([{ name: auth.name, value: auth.value, url: BASE }]);
 
 try {
   await page.goto(BASE + "/app");
@@ -80,7 +85,7 @@ try {
   await page.screenshot({ path: "screenshots/m1-04-final.png" });
 
   // 6. ffprobe 断言成片时长 28–32s
-  const pid = (await (await fetch("http://localhost:8787/api/projects")).json())
+  const pid = (await (await afetch(`${API}/api/projects`)).json())
     .find((p) => p.title === "日落宣传测试").id;
   const out = execFileSync(ffprobe, ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
     `data/projects/${pid}/final.mp4`]).toString().trim();
@@ -89,7 +94,7 @@ try {
   console.log(`E2E PASS · final.mp4 = ${dur.toFixed(1)}s · screenshots in ./screenshots/`);
 } finally {
   await browser.close();
-  await fetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
+  await afetch(`${API}/api/settings`, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...settings, chatDefaultId: origChatDefault, videoDefaultId: origVideoDefault }) });
   console.log(`[restore] chat/video default -> ${origChatDefault} / ${origVideoDefault}`);
 }

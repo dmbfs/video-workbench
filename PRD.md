@@ -163,7 +163,7 @@ pnpm monorepo · 全 TypeScript：`apps/web` React18+Vite+Tailwind+shadcn/ui+Zus
 | M2b | 首页 + 动效 + Aceternity/Magic UI | ✅ 完成：E2E-M2b PASS（landing→app 全链路 30.0s），截图 screenshots/m2b-0*.png；视觉复核待用户（图像桥故障） |
 | M2 | Agent 窗口接真实 OpenAI 兼容 chat | ✅ 完成：mock E2E PASS(final=30.0s) + 真实模型冒烟 PASS（glm-5.3-flash，4 段合法分镜 50.9s）；截图 screenshots/m2-0*.png |
 | M3 | 真实视频 provider + 编排 + SSE 进度 + 单段重生成 | ✅ 完成：M3a openai-video 契约（网关不兼容）+ M3b TokenDance Seedance 原生协议；应用内真机出片 4.06s h264+aac，mock E2E PASS |
-| M4 | 导出转场/历史完善 | 成品 mp4 正常播放，项目管理闭环 |
+| M4 | 导出转场/历史完善 | ✅ 完成（2026-09-10）：xfade+acrossfade 叠化（按每段转场标记 0.5s，或 crossfadeMs 全局覆盖）、首尾帧接力（前段末帧抽取→下一段图生视频首帧，前段失败自动降级纯文生）、段序调整/prompt 点击编辑/转场标记切换（FR-3 补齐）；另有防重入队、时长上限拦截、ZodError→400、finalReady 实算等修复；QA 15 用例 + 4 套 e2e 回归全过 |
 | M5 | 整体验收 | 全流程走查 + 截图交付 |
 
 ## 10. 风险与对策

@@ -71,6 +71,8 @@ try {
 
   // 5. 生成 + 导出
   await page.getByRole("button", { name: /生成全部/ }).click();
+  await page.waitForSelector("text=确认消耗算力生成视频？", { timeout: 10000 }); // FR-9 成本确认窗
+  await page.getByRole("button", { name: /开始出片/ }).click();
   const t0 = Date.now();
   for (;;) {
     const n = await page.locator("video").count();

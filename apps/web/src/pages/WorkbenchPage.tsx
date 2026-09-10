@@ -32,6 +32,7 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
   const [applying, setApplying] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [mockMode, setMockMode] = useState(false);
   const ref = useRef(projectId);
 
   const load = useCallback(() => {
@@ -43,6 +44,14 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
     });
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // Mock 透明化：生效的默认对话/视频模型是 mock 时明示，避免把脚本假数据当成真生成
+    api.settings().then((s) => {
+      const v = s.providers.find((p) => p.id === s.videoDefaultId);
+      const c = s.providers.find((p) => p.id === s.chatDefaultId);
+      setMockMode(v?.kind === "mock" || c?.kind === "mock");
+    }).catch(() => {});
+  }, []);
   useEffect(() => subscribeEvents(ref.current, (e) => {
     if (e.type === "segment_status") {
       setSegments((ss) => ss.map((s) => (s.id === e.segmentId ? { ...s, status: e.status, error: e.error } : s)));
@@ -114,6 +123,12 @@ export function WorkbenchPage({ projectId }: { projectId: string }) {
           {segments.length} 段 · 共 {totalDur}s · {ratio}
         </p>
       </header>
+
+      {mockMode && (
+        <div className="rise-in rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-[#FBBF24]">
+          ⚠️ 当前是本地 Mock 演示模式：对话与分镜是脚本假数据、视频是彩条占位片。正式使用请到「设置」接入真实模型 key。
+        </div>
+      )}
 
       {/* 提示词条（Pika 式）：输入 + 时长 chip + 加入 */}
       <div className="rise-in flex items-center gap-2" style={{ animationDelay: "60ms" }}>

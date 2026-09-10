@@ -10,6 +10,7 @@
 ## 仓库布局
 
 - `skills/` — 已安装的 agent skills（superpowers 精选、官方 skill-creator、minimax-cli、remotion、前端三件套、webapp-testing、video-postfx）
+- `apps/server/src/skills/` — **运行时技能层**（一键成片 skill 链，PRD FR-12/§7.8；与上面 agent skills 是两层概念，契约见其 README.md）
 - `docs/` — 调研与计划文档；`docs/superpowers/plans/` 存放各里程碑实施计划
 - `.firecrawl/` — Firecrawl 抓取证据（原始 markdown）
 - 后续 `apps/web`、`apps/server`、`packages/shared` 按 PRD §8 创建

@@ -11,6 +11,7 @@ import { eventRoutes } from "./routes/events.js";
 import { exportRoutes } from "./routes/export.js";
 import { chatRoutes } from "./routes/chat.js";
 import { storyboardRoutes } from "./routes/storyboard.js";
+import { autoRoutes } from "./routes/auto.js";
 import { authRoutes } from "./routes/auth.js";
 import { sessionUser, readSessionCookie } from "./auth.js";
 
@@ -55,6 +56,7 @@ await app.register(eventRoutes);
 await app.register(exportRoutes);
 await app.register(chatRoutes);
 await app.register(storyboardRoutes);
+await app.register(autoRoutes);
 
 const port = Number(process.env.PORT ?? 8787);
 await app.listen({ port, host: "127.0.0.1" });

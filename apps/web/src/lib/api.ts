@@ -39,6 +39,8 @@ export const api = {
   generateAll: (pid: string) => fetch(`/api/projects/${pid}/generate-all`, { method: "POST" }).then(j),
   export: (pid: string, crossfadeMs = 0, postfx: "none" | "film" | "clean" = "none") =>
     fetch(`/api/projects/${pid}/export`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ crossfadeMs, postfx }) }).then(j),
+  auto: (body: { prompt: string; ratio?: "16:9" | "9:16"; postfx?: "none" | "film" | "clean"; crossfadeMs?: number }) =>
+    fetch(`/api/projects/auto`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(j),
   settings: (): Promise<PublicSettings> => fetch("/api/settings").then(j),
   saveSettings: (s: unknown) =>
     fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) }).then(j),

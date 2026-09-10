@@ -58,8 +58,20 @@ export const sseEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("chat_done"), messageId: z.string() }),
   z.object({ type: z.literal("storyboard_proposed"), storyboard: z.any() }),
   z.object({ type: z.literal("timeline_replaced"), projectId: z.string() }),
+  // 一键成片 skill 链（PRD §7.8）：step ∈ prompt-enhance / storyboard / video-gen / postfx-grade / stitch-export
+  z.object({ type: z.literal("chain_progress"), step: z.string(), detail: z.string() }),
+  z.object({ type: z.literal("chain_done"), url: z.string() }),
+  z.object({ type: z.literal("chain_error"), step: z.string(), error: z.string() }),
 ]);
 export type SseEvent = z.infer<typeof sseEventSchema>;
+
+/** 一键成片（skill 链全自动）：一段 prompt 直接跑到 final.mp4（PRD FR-12） */
+export const autoProjectSchema = z.object({
+  prompt: z.string().min(2).max(500),
+  ratio: ratioSchema.default("16:9"),
+  postfx: z.enum(["none", "film", "clean"]).default("none"),
+  crossfadeMs: z.number().int().min(0).max(2000).default(0),
+});
 
 export const createProjectSchema = z.object({ title: z.string().min(1), ratio: ratioSchema.default("16:9") });
 export const addSegmentSchema = z.object({ prompt: z.string().min(1), duration: z.number().int().min(4).max(30).default(10) });

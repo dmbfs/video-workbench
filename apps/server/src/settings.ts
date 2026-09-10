@@ -27,10 +27,18 @@ export function saveSettings(s: Settings): Settings {
   // 先回填旧 key（前端永远拿不到明文 key，回传时 apiKey 为空 → 按 id 匹配旧值），
   // 再做必填校验，否则脱敏回传会被误判为缺 key
   const old = getSettings();
+  // key 墓碑表：provider 被删除后 key 仍可找回（防止「子集回传→删除→再恢复时 key 已丢」）
+  for (const p of old.providers) {
+    if (p.apiKey) db.prepare("INSERT INTO settings_key_backup(id,api_key) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET api_key=excluded.api_key")
+      .run(p.id, p.apiKey);
+  }
+  const backupKey = (id: string) =>
+    (db.prepare("SELECT api_key FROM settings_key_backup WHERE id=?").get(id) as { api_key: string } | undefined)?.api_key;
   parsed.providers = parsed.providers.map((p) => {
     if (p.apiKey) return p;
     const prev = old.providers.find((o) => o.id === p.id);
-    return prev?.apiKey ? { ...p, apiKey: prev.apiKey } : p;
+    const key = prev?.apiKey ?? backupKey(p.id);
+    return key ? { ...p, apiKey: key } : p;
   });
   // 按 kind 校验必填项（mock 豁免；tokendance-seedance 的 baseUrl 有代码内默认值）
   for (const p of parsed.providers) {

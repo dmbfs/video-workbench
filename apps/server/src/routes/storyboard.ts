@@ -9,11 +9,13 @@ import type { ChatMsg } from "../providers/chat-types.js";
 
 export async function storyboardRoutes(app: FastifyInstance) {
   /** 让分镜顾问产出结构化提案：JSON 模式优先，zod 校验失败自动把错误喂回去重问一次 */
-  app.post("/api/projects/:id/storyboard/propose", async (req) => {
+  app.post("/api/projects/:id/storyboard/propose", async (req, reply) => {
     const { id } = req.params as any;
     const settings = getSettings();
     const cfg = settings.providers.find((p) => p.id === settings.chatDefaultId)
-      ?? settings.providers.find((p) => p.kind === "mock")!;
+      ?? settings.providers.find((p) => p.kind === "openai-compatible")
+      ?? settings.providers.find((p) => p.kind === "mock");
+    if (!cfg) return reply.code(400).send({ error: "没有可用的对话模型，请到设置页添加并设为默认" });
     const provider = getChatProvider(cfg);
     const history = (db.prepare("SELECT role, content FROM chat_messages WHERE project_id=? ORDER BY created_at").all(id) as any[])
       .map((r) => ({ role: r.role as ChatMsg["role"], content: r.content }));
@@ -42,22 +44,26 @@ export async function storyboardRoutes(app: FastifyInstance) {
     }
   });
 
-  /** 采用提案：整体替换时间线段落（UI 侧有替换确认文案） */
+  /** 采用提案：整体替换时间线段落（UI 侧有替换确认文案）。事务保证不出现半截状态 */
   app.post("/api/projects/:id/storyboard/apply", async (req) => {
     const { id } = req.params as any;
     const sb = storyboardProposalSchema.parse(req.body) as StoryboardProposal;
-    db.prepare("DELETE FROM segments WHERE project_id=?").run(id);
-    const ins = db.prepare("INSERT INTO segments(id,project_id,idx,prompt,duration,transition_out) VALUES(?,?,?,?,?,?)");
-    const segments = sb.segments.map((s, i) => {
-      const sid = newId();
-      ins.run(sid, id, i + 1, s.prompt, s.duration, s.transitionOut);
-      return { id: sid, projectId: id, idx: i + 1, prompt: s.prompt, duration: s.duration,
-        transitionOut: s.transitionOut, status: "pending" as const };
+    const applyTx = db.transaction(() => {
+      db.prepare("DELETE FROM segments WHERE project_id=?").run(id);
+      const ins = db.prepare("INSERT INTO segments(id,project_id,idx,prompt,duration,transition_out) VALUES(?,?,?,?,?,?)");
+      const segments = sb.segments.map((s, i) => {
+        const sid = newId();
+        ins.run(sid, id, i + 1, s.prompt, s.duration, s.transitionOut);
+        return { id: sid, projectId: id, idx: i + 1, prompt: s.prompt, duration: s.duration,
+          transitionOut: s.transitionOut, status: "pending" as const };
+      });
+      db.prepare("UPDATE storyboards SET title=?, ratio=?, with_audio=?, style_prefix=?, confirmed_at=? WHERE project_id=?")
+        .run(sb.title, sb.ratio, sb.withAudio ? 1 : 0, sb.stylePrefix, new Date().toISOString(), id);
+      db.prepare("UPDATE projects SET title=?, ratio=?, updated_at=? WHERE id=?")
+        .run(sb.title, sb.ratio, new Date().toISOString(), id);
+      return segments;
     });
-    db.prepare("UPDATE storyboards SET title=?, ratio=?, with_audio=?, style_prefix=?, confirmed_at=? WHERE project_id=?")
-      .run(sb.title, sb.ratio, sb.withAudio ? 1 : 0, sb.stylePrefix, new Date().toISOString(), id);
-    db.prepare("UPDATE projects SET title=?, ratio=?, updated_at=? WHERE id=?")
-      .run(sb.title, sb.ratio, new Date().toISOString(), id);
+    const segments = applyTx();
     broadcast({ type: "timeline_replaced", projectId: id }, id);
     return { segments };
   });

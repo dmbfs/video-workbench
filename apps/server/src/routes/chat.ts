@@ -22,7 +22,9 @@ export async function chatRoutes(app: FastifyInstance) {
 
     const settings = getSettings();
     const cfg = settings.providers.find((p) => p.id === settings.chatDefaultId)
-      ?? settings.providers.find((p) => p.kind === "mock")!;
+      ?? settings.providers.find((p) => p.kind === "openai-compatible")
+      ?? settings.providers.find((p) => p.kind === "mock");
+    if (!cfg) return reply.code(400).send({ error: "没有可用的对话模型，请到设置页添加并设为默认" });
     const provider = getChatProvider(cfg);
 
     db.prepare("INSERT INTO chat_messages(id,project_id,role,content,created_at) VALUES(?,?,?,?,?)")

@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NU
   created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS settings_key_backup (id TEXT PRIMARY KEY, api_key TEXT NOT NULL);
 `);
 
 export const dataRoot = DATA;

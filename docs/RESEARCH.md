@@ -63,3 +63,14 @@
 - 事实标准确认：LLMGateway 文档定义 OpenAI 兼容异步视频契约 POST /v1/videos（model/prompt/seconds/size/audio/image/last_frame/reference_*）→ GET /v1/videos/{id} → /content 下载；据此实现 openai-video provider（对兼容该契约的网关仍有效）。证据：.firecrawl/llmgw-video.md。
 - **M3b 实测（2026-09-09）**：`POST https://tokendance.space/gateway/ark/v3/generations/tasks` + `model=seedance-2.5` → 200 `cgt-20260909160300-74wff`，轮询 `succeeded`，下载得 1280x720 / 5.04s / h264 真实 mp4；应用内 provider 全链路（建项目→4s 段→生成→落地）同样 PASS，产物 h264+aac 4.06s。余额 `/portal/api/v1/user/balance` = 169.76 元，充足；此前 402 `insufficient_quota` 仅因探测误用 `duration=999` 触发预扣估算。
 - 结论：视频出片的正确姿势是 TokenDance 原生协议（本轮接入 Seedance；MiniMax/Kling/Wan/HappyHorse 各自独立路径，按需再开任务）。
+
+## 8. MiniMax 视频契约核实（2026-09-10）
+
+- **网关路径**：TokenDance 的 MiniMax 协议在 `https://tokendance.space/gateway/minimax` 下，创建 `POST /v2/video_generation`、轮询 `GET /v2/query/video_generation/{task_id}`；网关文档与 `platform.minimax.io` 官方示例措辞完全一致（证据：用户截图 + `.firecrawl/minimax-video.md`）。
+- **零成本探针实测**：该路径真实存在且鉴权通过（发假模型名返回 `模型不存在: …` / `invalid_request`，而非 401/404）；`GET /gateway/v1/models` 目录内含 `minimax-h3`、`minimax-h3-max`、`seedance-2.5`、`seedance-2.0{,-fast,-mini}`。
+- **四处适配器缺陷（已修，`scripts/providers-contract.mjs` 20 条断言守护）**：
+  1. t2va **必须传 `ratio`**（且不可为 `adaptive`）——原实现完全没传，文生视频必报错；
+  2. i2va 图片元素形状为 `{type:"image_url", image_url:{url}, role:"first_frame"}`——原实现传裸字符串且无 `role`，首帧接力失效；
+  3. `resolution` 需显式传（H3 支持 768P/2K，**H3-Max 仅 480P/768P**，请求 2K 会 400）；
+  4. 轮询响应是**嵌套小写** `{task:{status:"succeeded",content:{url}}}`——原实现按顶层大写 `status==="Success"` 解析，永远读不到成功，会空转到 10 分钟超时白扣费。
+- 教训沉淀：新 provider 接入前先跑 `pnpm providers-contract`（stub fetch、零花费），再花真钱验证。

@@ -73,7 +73,7 @@ export class MiniMaxProvider implements VideoProvider {
       if (!url) return { status: "failed", error: "minimax 成功但未返回下载地址" };
       return { status: "succeeded", videoRef: url };
     }
-    if (status === "failed" || status === "fail" || status === "cancelled") {
+    if (status === "failed" || status === "fail" || status === "cancelled" || status === "canceled" || status === "expired") {
       return { status: "failed", error: t.error?.message ?? t.error ?? `minimax ${status}` };
     }
     if (status === "queued" || status === "queue" || status === "preparing") return { status: "queued" };

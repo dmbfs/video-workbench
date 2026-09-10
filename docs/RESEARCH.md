@@ -71,6 +71,6 @@
 - **四处适配器缺陷（已修，`scripts/providers-contract.mjs` 20 条断言守护）**：
   1. t2va **必须传 `ratio`**（且不可为 `adaptive`）——原实现完全没传，文生视频必报错；
   2. i2va 图片元素形状为 `{type:"image_url", image_url:{url}, role:"first_frame"}`——原实现传裸字符串且无 `role`，首帧接力失效；
-  3. `resolution` 需显式传（H3 支持 768P/2K，**H3-Max 仅 480P/768P**，请求 2K 会 400）；
+  3. `resolution` 需显式传（H3 支持 768P/2K，**H3-Max 仅 480P/768P**，请求 2K 会 400）。**漏传 `resolution` 的报错很迷惑：`400 当前模型未配置该请求规格的价格`**——网关价格检查先于参数校验，缺档位就无法定位价目，看起来像「网关没配价」实则是我们没传字段（2026-09-10 用户实撞，零成本探针复现：不传→价格错，传 768P→越过价格检查）。
   4. 轮询响应是**嵌套小写** `{task:{status:"succeeded",content:{url}}}`——原实现按顶层大写 `status==="Success"` 解析，永远读不到成功，会空转到 10 分钟超时白扣费。
 - 教训沉淀：新 provider 接入前先跑 `pnpm providers-contract`（stub fetch、零花费），再花真钱验证。

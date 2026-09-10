@@ -6,14 +6,16 @@ import { promptEnhance } from "./prompt-enhance.js";
 import { storyboard } from "./storyboard.js";
 import { applyProposal } from "./shared.js";
 import { videoGen } from "./video-gen.js";
+import { narration } from "./narration.js";
 import { postfxGrade } from "./postfx-grade.js";
 import { exportFinal } from "./stitch-export.js";
 
 /**
  * 一键成片 skill 链（PRD FR-12 / §7.8）：
- *   prompt-enhance → storyboard（自动采用）→ video-gen → postfx-grade → stitch-export
+ *   prompt-enhance → storyboard（自动采用）→ video-gen → narration → postfx-grade → stitch-export
  * 每步广播 chain_progress；任一步失败广播 chain_error 并把原因落为聊天消息，链不重试
  * （付费步骤的重试交给编排器既有策略，避免链层重复扣费）。
+ * 例外：narration 为非致命增强步骤——失败只 ⚠️ 落聊天消息并继续（成片不含旁白）。
  */
 export interface AutoChainInput {
   prompt: string;
@@ -45,6 +47,16 @@ export async function runAutoChain(projectId: string, input: AutoChainInput): Pr
     current = "video-gen";
     step(projectId, current, `逐段生成 ${sb.segments.length} 段（并发 2，首尾帧接力）…`);
     await videoGen.run(projectId);
+
+    current = "narration";
+    step(projectId, current, "撰写旁白并合成配音…");
+    try {
+      const n = await narration.run(projectId);
+      chatLog(projectId, `✅ 旁白完成：${n.count} 段 / ${n.totalChars} 字（导出时自动混入，人声优先）`);
+    } catch (e) {
+      // 非致命：旁白是增强，不是必需品——已生成的视频段不能因它作废
+      chatLog(projectId, `⚠️ 旁白跳过：${(e as Error).message?.slice(0, 160)}（成片将不含旁白）`);
+    }
 
     current = "postfx-grade";
     step(projectId, current, `质感预设：${input.postfx}`);

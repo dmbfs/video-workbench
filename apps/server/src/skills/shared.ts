@@ -17,8 +17,13 @@ export function pickChatProvider(): ChatCtx | undefined {
   return cfg ? { cfg, provider: getChatProvider(cfg) } : undefined;
 }
 
-/** 分镜 JSON 生成：JSON 模式优先，zod 校验失败自动把错误喂回去重问一次（超时/上游错误原样上抛） */
-export async function proposeStoryboardJSON(provider: ChatProvider, messages: ChatMsg[]): Promise<StoryboardProposal> {
+/** 通用 JSON 问答：JSON 模式优先，zod 校验失败自动把错误喂回去重问一次（超时/上游错误原样上抛） */
+export async function askJSON<T>(
+  provider: ChatProvider,
+  messages: ChatMsg[],
+  schema: { parse: (v: unknown) => T },
+  label: string,
+): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt++) {
     let raw = "";
     try {
@@ -30,9 +35,9 @@ export async function proposeStoryboardJSON(provider: ChatProvider, messages: Ch
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
     try {
-      return storyboardProposalSchema.parse(JSON.parse(raw.slice(start, end + 1)));
+      return schema.parse(JSON.parse(raw.slice(start, end + 1)));
     } catch (e) {
-      if (attempt === 1) throw new Error(`分镜 JSON 校验失败：${(e as Error).message.slice(0, 200)}`);
+      if (attempt === 1) throw new Error(`${label} JSON 校验失败：${(e as Error).message.slice(0, 200)}`);
       messages.push(
         { role: "assistant", content: raw.slice(0, 400) },
         { role: "user", content: `JSON 不合法：${(e as Error).message.slice(0, 300)}。请严格按结构重新只输出 JSON。` },
@@ -40,6 +45,11 @@ export async function proposeStoryboardJSON(provider: ChatProvider, messages: Ch
     }
   }
   throw new Error("unreachable");
+}
+
+/** 分镜 JSON 生成（askJSON 的分镜专用封装） */
+export async function proposeStoryboardJSON(provider: ChatProvider, messages: ChatMsg[]): Promise<StoryboardProposal> {
+  return askJSON(provider, messages, storyboardProposalSchema, "分镜");
 }
 
 /** 提案落库：整体替换时间线段落并确认分镜（原 storyboard/apply 事务，供路由与 skill 链共用） */

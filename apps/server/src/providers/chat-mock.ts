@@ -11,13 +11,21 @@ const PROPOSAL = {
   ],
 };
 
-/** 无 key 时的脚本化对话：普通轮回复一句话；json 请求回合法分镜并逐字吐出（模拟流式） */
+/** 无 key 时的脚本化对话：普通轮回复一句话；json 请求按类型回合法 JSON 并逐字吐出（模拟流式） */
 export class MockChatProvider implements ChatProvider {
   kind = "mock";
   async *stream(messages: ChatMsg[], opts?: { json?: boolean }): AsyncIterable<string> {
     const last = messages[messages.length - 1]?.content ?? "";
     let full: string;
-    if (opts?.json) full = JSON.stringify(PROPOSAL);
+    if (opts?.json && /旁白/.test(last)) {
+      full = JSON.stringify({
+        segments: [
+          { idx: 1, text: "傍晚的海风把白天的燥热吹散了。" },
+          { idx: 2, text: "这座城市最温柔的时刻，藏在街角的灯光里。" },
+          { idx: 3, text: "夜色亮起来，故事才刚刚开始。" },
+        ],
+      });
+    } else if (opts?.json) full = JSON.stringify(PROPOSAL);
     else if (/分镜|脚本|方案/.test(last)) full = "信息够了，我来生成完整分镜——点右侧的「生成完整分镜」就能看到结构化脚本。";
     else full = `收到：「${last.slice(0, 24)}」。主体/场景/风格/时长都齐了吗？缺什么直接说，齐了就让我出分镜。`;
     for (const ch of full) {

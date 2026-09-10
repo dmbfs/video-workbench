@@ -18,3 +18,8 @@ export const BREAKER_FAILURE_THRESHOLD = envInt("VIDSTITCH_BREAKER_FAILURE_THRES
 /** 生成请求的期望清晰度档位（VIDSTITCH_RESOLUTION=720p 可降档省成本）；实际按 provider 能力收紧 */
 export const DESIRED_RESOLUTION: "720p" | "1080p" =
   process.env.VIDSTITCH_RESOLUTION === "720p" ? "720p" : "1080p";
+
+/** 旁白 TTS 语音模型（TokenDance 目录：minimax-speech-2.8-{turbo,hd}，turbo 更省更快） */
+export const TTS_MODEL = process.env.VIDSTITCH_TTS_MODEL || "minimax-speech-2.8-turbo";
+/** 旁白音色（MiniMax 系统音色 ID，如 male-qn-qingse） */
+export const TTS_VOICE = process.env.VIDSTITCH_TTS_VOICE || "female-shaonv";

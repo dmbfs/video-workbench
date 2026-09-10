@@ -4,6 +4,10 @@
 import { MiniMaxProvider } from "../apps/server/src/providers/minimax.js";
 import { SeedanceProvider } from "../apps/server/src/providers/seedance.js";
 import { TokenDanceSeedanceProvider } from "../apps/server/src/providers/tokendance-seedance.js";
+import { MiniMaxTtsProvider, MockTtsProvider } from "../apps/server/src/providers/tts.js";
+import { mkdtempSync, statSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = "") => { console.log(`${cond ? "✅" : "❌"} ${name}${detail ? " · " + detail : ""}`); cond ? pass++ : fail++; };
@@ -91,6 +95,37 @@ const req = (over = {}) => ({ prompt: "一只柯基在海边", duration: 6, rati
   ok("TokenDance 默认 baseUrl 生效", calls[0].url === "https://tokendance.space/gateway/ark/v3/generations/tasks", calls[0].url);
   ok("TokenDance 返回 id 作 taskId", taskId === "cgt-2", taskId);
   ok("TokenDance t2v 传 ratio", b.ratio === "16:9", `ratio=${b.ratio}`);
+}
+
+// ── MiniMax TTS（M5a 旁白）────────────────────────────────────────
+{
+  const HEX = Buffer.from("ID3mp3-bytes").toString("hex"); // 任意可解码 hex
+  const calls = stubFetch(() => ({
+    json: { base_resp: { status_code: 0, status_msg: "success" }, data: { audio: HEX }, extra_info: { usage_characters: 11, audio_length: 2736 } },
+  }));
+  const dir = mkdtempSync(path.join(tmpdir(), "tts-"));
+  const out = path.join(dir, "seg-01.mp3");
+  const tts = new MiniMaxTtsProvider({ baseUrl: "https://tokendance.space/gateway/minimax", apiKey: "k", modelId: "minimax-speech-2.8-turbo", voiceId: "female-shaonv" });
+  const res = await tts.synthesize("你好，契约探针。", out, 10);
+  ok("TTS 路径为 /v1/t2a_v2", calls[0].url === "https://tokendance.space/gateway/minimax/v1/t2a_v2", calls[0].url);
+  const b = calls[0].body;
+  ok("TTS 请求体含语音/音频设置", b.voice_setting?.voice_id === "female-shaonv" && b.audio_setting?.format === "mp3" && b.model === "minimax-speech-2.8-turbo", JSON.stringify({ v: b.voice_setting?.voice_id, f: b.audio_setting?.format }));
+  ok("TTS hex 音频落盘", statSync(out).size === Buffer.from("ID3mp3-bytes").length, `${statSync(out).size}B`);
+  ok("TTS 时长取自 extra_info（免 ffprobe）", res.durationSec === 2.736 && res.chars === 11, `dur=${res.durationSec}s chars=${res.chars}`);
+  // 错误映射：base_resp 非零 → 抛错
+  stubFetch(() => ({ json: { base_resp: { status_code: 1004, status_msg: "invalid voice" } } }));
+  let threw = false;
+  try { await tts.synthesize("x", out); } catch { threw = true; }
+  ok("TTS base_resp 错误上抛", threw);
+  rmSync(dir, { recursive: true, force: true });
+}
+// ── MockTts：ffmpeg 正弦波（e2e 零计费兜底）──────────────────────
+{
+  const dir = mkdtempSync(path.join(tmpdir(), "tts-mock-"));
+  const out = path.join(dir, "seg-01.mp3");
+  const res = await new MockTtsProvider().synthesize("测试", out, 10);
+  ok("MockTts 产出音频且时长 < 目标", statSync(out).size > 1000 && res.durationSec > 0 && res.durationSec < 10, `${statSync(out).size}B ${res.durationSec.toFixed(2)}s`);
+  rmSync(dir, { recursive: true, force: true });
 }
 
 console.log(`\nproviders-contract: ${pass} pass / ${fail} fail`);

@@ -71,6 +71,63 @@ export function extractLastFrame(file: string): Promise<string> {
 }
 
 /**
+ * 旁白混入（M5a）：把 narration/seg-XX.mp3 按段起点对齐铺成整条旁白轨，与成片原声混合。
+ * - 段起点 = 前段时长累计 − xfade 重叠修正（crossfades[i-1]）
+ * - 人声优先：原声压至 0.55，旁白 1.0，汇总后限幅防削波
+ * - 成片无音轨时旁白独占（直接替换音轨）
+ * 混音只动音频轨，视频流复制，成片时长不变。
+ */
+export async function mixNarration(
+  finalPath: string,
+  narrationSegments: { file: string; idx: number }[],
+  segDurations: number[],
+  crossfades: number[],
+): Promise<void> {
+  // 段起点（秒）：前段时长累计 − 前面所有转场的重叠
+  const starts: number[] = [];
+  let acc = 0;
+  for (let i = 0; i < segDurations.length; i++) {
+    starts.push(acc);
+    acc += segDurations[i] - (crossfades[i] ?? 0) / 1000;
+  }
+  const hasAudio = await new Promise<boolean>((res) => {
+    const p = spawn(ffprobePath, ["-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", finalPath], { stdio: "pipe" });
+    let out = "";
+    p.stdout.on("data", (d) => (out += d));
+    p.on("exit", () => res(out.trim().length > 0));
+  });
+
+  // 旁白轨：每条 adelay 到位后 amix 汇总（normalize=0 保持电平）
+  const inputs = narrationSegments.map((n) => ["-i", n.file]).flat();
+  const chains: string[] = [];
+  const labels: string[] = [];
+  narrationSegments.forEach((n, i) => {
+    const delayMs = Math.max(0, Math.round((starts[n.idx - 1] ?? 0) * 1000));
+    chains.push(`[${i + 1}:a]adelay=${delayMs}|${delayMs}[d${i}]`);
+    labels.push(`[d${i}]`);
+  });
+  const narrChain = labels.length === 1
+    ? `${labels[0]}anull[narr]`
+    : `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0[narr]`;
+  const tail = hasAudio
+    ? `[0:a]volume=0.55[bg];[bg][narr]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`
+    : `[narr]anull[aout]`;
+
+  const mixed = finalPath.replace(/\.mp4$/, ".mixed.mp4");
+  await run([
+    "-y", "-i", finalPath, ...inputs,
+    "-filter_complex", `${chains.join(";")};${narrChain};${tail}`,
+    "-map", "0:v", "-map", "[aout]",
+    ...QUALITY_ACODEC,
+    "-movflags", "+faststart",
+    mixed,
+  ]);
+  const { renameSync, rmSync } = await import("node:fs");
+  rmSync(finalPath, { force: true });
+  renameSync(mixed, finalPath);
+}
+
+/**
  * 拼接导出（PRD FR-6）：
  * - crossfades[i] = 第 i 段与第 i+1 段之间的转场时长（ms）；全 0 走 concat 硬切（流复制，快）。
  * - 任一边界 >0 时走 xfade（视频叠化）+ acrossfade（音频）单次滤镜链；

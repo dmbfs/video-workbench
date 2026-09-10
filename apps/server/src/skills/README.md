@@ -14,9 +14,11 @@
    ▼
 [3] video-gen        逐段排队生成（编排器硬边界：轮询超时/调用上限/熔断/首尾帧接力全继承）
    ▼
-[4] postfx-grade     选定质感预设（none/film/clean，配方 skills/video-postfx/SKILL.md）
+[4] narration        旁白稿（聊天 JSON，字数 ≤ 时长×4.5）→ 逐段 TTS → narration.json + narration/seg-XX.mp3
    ▼
-[5] stitch-export    归一化 → 质感滤镜 → concat/xfade → final.mp4
+[5] postfx-grade     选定质感预设（none/film/clean，配方 skills/video-postfx/SKILL.md）
+   ▼
+[6] stitch-export    归一化 → 质感滤镜 → concat/xfade → 旁白混入（人声优先）→ final.mp4
 ```
 
 进度经 SSE 广播：`chain_progress` / `export_progress` / `final_ready` / `chain_done` / `chain_error`；里程碑与失败原因同步落为聊天消息。
@@ -28,8 +30,11 @@
 | prompt-enhance | `{prompt}` | `{brief}` | 模型不可用/空结果上抛，链终止 |
 | storyboard | `{prompt, brief}` | `StoryboardProposal` | JSON 两次校验失败上抛 |
 | video-gen | `projectId` | `{count}` | 任一段 failed 上抛（含段序+原因），链不自动重试付费任务 |
+| narration | `projectId` | `{count, totalChars}` | **非致命**：任一环节失败仅 ⚠️ 落聊天消息，链继续（成片不含旁白） |
 | postfx-grade | `postfx` | `{postfx}` | 未知预设上抛 |
-| stitch-export | `{crossfadeMs, postfx}` | `{url, path}` | 无完成分段 / ffmpeg 失败上抛 |
+| stitch-export | `{crossfadeMs, postfx}` | `{url, path, narrationMixed}` | 无完成分段 / ffmpeg 失败上抛；旁白混入失败降级为无旁白成片 |
+
+TTS provider（`providers/tts.ts`）：`MiniMaxTtsProvider`（复用 minimax 视频 provider 的网关与 key，`/v1/t2a_v2`，音色/模型可 `VIDSTITCH_TTS_VOICE`/`VIDSTITCH_TTS_MODEL` 覆盖，超长自动 atempo ≤1.4 适配段时长）与 `MockTtsProvider`（ffmpeg 正弦波，e2e 零计费）。
 
 ## 设计约束
 

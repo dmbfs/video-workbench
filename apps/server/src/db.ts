@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS generation_calls (id INTEGER PRIMARY KEY AUTOINCREMEN
   segment_id TEXT NOT NULL, provider TEXT, created_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE);
 CREATE INDEX IF NOT EXISTS idx_generation_calls_project ON generation_calls(project_id);
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, account_type TEXT NOT NULL CHECK(account_type IN ('phone','email')),
+  account TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, nickname TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+  created_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 `);
 
 export const dataRoot = DATA;

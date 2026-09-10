@@ -89,3 +89,22 @@ export const storyboardProposalSchema = z.object({
   })).min(1).max(6),
 }).refine((s) => s.segments.reduce((a, x) => a + x.duration, 0) <= 60, { message: "总时长超过 60s" });
 export type StoryboardProposal = z.infer<typeof storyboardProposalSchema>;
+
+// ── 账号体系（v1.1 新增：手机号 / 邮箱 + 密码）─────────────────────────────
+export const accountTypeSchema = z.enum(["phone", "email"]);
+export type AccountType = z.infer<typeof accountTypeSchema>;
+
+export const publicUserSchema = z.object({
+  id: z.string(), account: z.string(), accountType: accountTypeSchema,
+  nickname: z.string().nullable(), createdAt: z.string(),
+});
+export type PublicUser = z.infer<typeof publicUserSchema>;
+
+/** account 为手机号（11 位，1 开头）或邮箱；具体格式校验/归一化在服务端做 */
+export const registerSchema = z.object({
+  account: z.string().min(5).max(120),
+  password: z.string().min(8).max(72),
+  nickname: z.string().min(1).max(30).optional(),
+});
+export const loginSchema = z.object({ account: z.string().min(5).max(120), password: z.string().min(1).max(72) });
+export const authOkSchema = z.object({ user: publicUserSchema });

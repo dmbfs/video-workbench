@@ -20,3 +20,6 @@ playwright-report/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ---- 本地备忘（个人工作区说明，不入库）----
+README-工作区位置.md
